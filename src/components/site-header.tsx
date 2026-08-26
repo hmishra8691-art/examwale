@@ -111,7 +111,7 @@ export function SiteHeader({
         with a fixed-width centre column keeps the search box the same size and
         in the same place on every page.
       */}
-      <div className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:gap-4 sm:px-6">
+      <div className="mx-auto grid h-16 max-w-[88rem] grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:gap-4 sm:px-6">
         <div className="flex items-center gap-1">
           <Link href="/" className="flex shrink-0 items-center gap-2 font-semibold">
             <span
@@ -317,7 +317,7 @@ export function SiteHeader({
           id="mobile-nav"
           className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t bg-[var(--surface)] lg:hidden"
         >
-          <div className="mx-auto max-w-7xl space-y-1 px-4 py-3">
+          <div className="mx-auto max-w-[88rem] space-y-1 px-4 py-3">
             <div className="mb-3 md:hidden">
               <GlobalSearch id="mobile-search" />
             </div>

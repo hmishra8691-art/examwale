@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { BottomNav } from "@/components/bottom-nav";
 import { getSession } from "@/modules/auth/session";
 import { getLocale } from "@/modules/i18n/service";
 import { unreadCount } from "@/modules/notifications/service";
@@ -59,7 +60,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -78,6 +79,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <main id="main">{children}</main>
         <SiteFooter />
+        {/*
+          The bottom bar is fixed, so it sits over the end of the page. The
+          spacer below reserves exactly its height on the breakpoints where it
+          is visible, which is cheaper and more reliable than padding <main>:
+          padding on main would also indent the footer's background, leaving a
+          strip of page colour under it.
+        */}
+        <div aria-hidden className="h-[calc(3.5rem+env(safe-area-inset-bottom))] lg:hidden" />
+        <BottomNav signedIn={Boolean(session)} unread={unread + unreadMessages} />
       </body>
     </html>
   );

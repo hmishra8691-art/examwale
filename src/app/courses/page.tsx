@@ -66,7 +66,7 @@ export default async function CoursesPage({ searchParams }: Props) {
   const activeExam = one(get("exam"));
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-[88rem] px-4 py-10 sm:px-6">
       <SectionHeading title={t.courses.title} description={t.courses.subtitle} />
 
       <CoverageNotice section="courses" className="mt-6" />

@@ -726,7 +726,7 @@ export function ReviewForm({ sessionId }: { sessionId: string }) {
             onClick={() => setRating(value)}
             aria-label={`${value} out of 5`}
             className={
-              value <= rating ? "text-lg text-saffron-500" : "text-lg text-ink-300 dark:text-ink-600"
+              value <= rating ? "text-lg text-rating" : "text-lg text-ink-300 dark:text-ink-600"
             }
           >
             ★

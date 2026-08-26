@@ -607,7 +607,27 @@ async function seedJobs(ref: Awaited<ReturnType<typeof seedReference>>) {
       : null;
 
     const postedAt = new Date(now - index * 2 * 86_400_000);
-    const expiresAt = new Date(now + 45 * 86_400_000);
+    /*
+      Application windows spread across the whole range rather than a flat 45
+      days for every posting.
+
+      Two reasons. Real boards look like this — some roles close this week,
+      some next quarter — and a column of identical "45 days left" badges reads
+      as obviously fake. And the countdown escalates its tone at 7 and 21 days,
+      so a uniform value means two of the three states never appear in the demo
+      and nobody notices when one of them breaks.
+
+      Deterministic, not random: the same index always produces the same date,
+      so a screenshot diff or a smoke assertion does not shift under it.
+
+      Note this is only defensible because these postings are fictional — ten
+      invented companies, flagged `source: "seed"` and slated for deletion
+      before launch. Exam application windows are seeded with NO dates for the
+      opposite reason: a plausible-looking UPSC deadline is how somebody misses
+      the real one.
+    */
+    const SPREAD_DAYS = [3, 52, 11, 88, 5, 34, 120, 18, 2, 67, 26, 150, 9, 41, 74, 14, 200, 6, 29, 95];
+    const expiresAt = new Date(now + SPREAD_DAYS[index % SPREAD_DAYS.length] * 86_400_000);
 
     const [posting] = await db.insert(jobPostings).values({
       companyId,

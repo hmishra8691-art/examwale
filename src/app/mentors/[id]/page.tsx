@@ -180,7 +180,7 @@ export default async function MentorProfilePage({ params }: Props) {
                       <span className="text-sm font-medium">
                         {entry.reviewerName ?? "A seeker"}
                       </span>
-                      <span className="text-sm text-saffron-600">
+                      <span className="text-sm text-rating">
                         {"★".repeat(entry.review.rating)}
                         <span className="text-ink-300 dark:text-ink-600">
                           {"★".repeat(5 - entry.review.rating)}

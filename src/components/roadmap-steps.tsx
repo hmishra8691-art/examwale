@@ -87,7 +87,7 @@ export function RoadmapSteps({ steps: initialSteps }: { steps: Step[] }) {
             className={cx(
               "relative z-10 mt-1 grid size-8 shrink-0 place-items-center rounded-full border-2 transition-colors",
               step.status === "DONE"
-                ? "border-verified-600 bg-verified-600 text-white"
+                ? "border-verified-700 bg-verified-700 text-white"
                 : step.status === "IN_PROGRESS"
                   ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-100"
                   : "border-[var(--border)] bg-[var(--surface)] text-faint hover:border-brand-400",

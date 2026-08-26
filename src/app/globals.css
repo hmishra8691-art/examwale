@@ -1,123 +1,239 @@
 @import "tailwindcss";
 
 /*
-  Design language — editorial
-  ---------------------------
-  The product's claim is that a verified person read your work and answered you.
-  The surface has to earn that, and decoration is the wrong way to do it: a page
-  that looks like a marketing site invites the reader to discount what it says.
-  So the reference is a serious newspaper or a private bank's client letter —
-  authority through restraint.
+  ExamWale design system — 2026
+  =============================
+  Audience: 16–26, mostly on a mid-range Android phone, often on patchy data,
+  frequently at night. Everything below follows from that sentence.
 
-  Four decisions carry it:
+  The product is a career *discovery* engine, not a reference manual. Someone
+  should be able to arrive without knowing what they want and leave with three
+  careers, an exam deadline and a saved job. That means the surface has to
+  reward scrolling — density, movement, and a clear "what's next" at every
+  step — without tipping into decoration that costs a second of load time.
 
-  · A serif for display. Source Serif 4 was drawn for reading on screens at
-    text sizes, not for looking clever in a headline. Inter continues to set
-    the body and every control, because a serif UI is affectation.
-  · Warm paper rather than pure white. #fbfaf8 is barely off-white, but it
-    stops the page glaring and lets hairline rules read as rules instead of
-    dirt on the screen.
-  · One accent, deep. Navy #2f5175 — 7.9:1 on paper, 8.2:1 under white text.
-    The saffron survives only as a restrained mark, not a second brand colour.
-  · Rules, not boxes. Content is separated by 1px lines and whitespace instead
-    of by cards with shadows. A stack of floating panels reads as a dashboard;
-    an editorial page reads as a document.
+  Four decisions carry the system:
 
-  What did NOT get flattened: the confidence colours. Verified green, estimate
-  amber and the generated-content violet are load-bearing — they are how the
-  reader tells a checked fact from a planning figure — so they keep their
-  distinct hues and are only pulled back in saturation.
+  · Indigo #5b5bd6 as the single brand colour, cyan as its accent. Indigo
+    clears 5.4:1 on white and 5.4:1 under white text, so the same value works
+    as a link, a button fill and a focus ring without a second "accessible
+    variant" that inevitably drifts. Cyan is bright enough to fail as body
+    text, so it is confined to large accents, borders and dark-surface text —
+    enforced by naming: `--accent-ink` is the only cyan you may set text in.
 
-  Type stays larger than a typical dashboard. A Class 10 student and a
-  45-year-old career changer both read this on a cheap phone in daylight.
+  · Dark is a first-class theme, not an inversion. Young users browse at
+    night; a screen that flashes white at 1am gets closed. Surfaces are near
+    -black #0b0d14 rather than pure black, so elevation is expressible.
+
+  · Elevation by layered surface + hairline, not by heavy shadow. Shadows on
+    a mid-range phone cost paint time and read as dated. A card lifts by being
+    lighter than its ground with a 1px edge, which is free.
+
+  · Motion is short and purposeful. 120–220ms, ease-out, transform and opacity
+    only — the two properties the compositor can animate without touching
+    layout. Anything that would animate width, height or top is a bug.
+
+  What did NOT change from the honesty work: the confidence colours. Verified
+  green, estimate amber and the judgement violet tell a reader whether a
+  number is checked, estimated, or someone's opinion. They keep distinct hues
+  and are deliberately outside the brand ramp so they cannot be mistaken for
+  decoration.
 */
 
 @theme {
-  --color-ink-50: #f4f3f0;
-  --color-ink-100: #eae8e3;
-  --color-ink-200: #dcd9d2;
-  --color-ink-300: #bab6ad;
-  --color-ink-400: #8d8a84;
-  --color-ink-500: #696f7d;
-  --color-ink-600: #5a6272;
-  --color-ink-700: #434a58;
-  --color-ink-800: #2d323d;
-  --color-ink-900: #1b1e26;
-  --color-ink-950: #12141a;
+  /* Neutral ramp — slate, cooled slightly to sit under indigo without muddying. */
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #dfe2ea;
+  --color-ink-300: #c3c8d4;
+  --color-ink-400: #949cae;
+  --color-ink-500: #6f7789;
+  --color-ink-600: #545b6c;
+  --color-ink-700: #3c4252;
+  --color-ink-800: #262b37;
+  --color-ink-900: #161a23;
+  --color-ink-950: #0b0d14;
 
-  --color-brand-50: #f1f5f9;
-  --color-brand-100: #e0e8f1;
-  --color-brand-200: #c5d4e4;
-  --color-brand-300: #a9c0d8;
-  --color-brand-400: #7593b5;
-  --color-brand-500: #4b6c92;
-  --color-brand-600: #2f5175;
-  --color-brand-700: #24405d;
-  --color-brand-800: #1d3349;
-  --color-brand-900: #182a3c;
+  /*
+    Brand indigo. 500 is the workhorse: 5.37:1 on white and 5.37:1 beneath
+    white text, so one value serves link, fill and ring. 600/700 exist for
+    small text on light grounds where the extra margin is worth having.
+  */
+  --color-brand-50: #eeeefb;
+  --color-brand-100: #e0e0f8;
+  --color-brand-200: #c4c4f2;
+  --color-brand-300: #a3a3ea;
+  --color-brand-400: #7f7fe0;
+  --color-brand-500: #5b5bd6;
+  --color-brand-600: #4a4ac2;
+  --color-brand-700: #3a3aa0;
+  --color-brand-800: #2f2f80;
+  --color-brand-900: #262664;
 
-  --color-saffron-50: #fff8ec;
-  --color-saffron-100: #ffedc9;
-  --color-saffron-200: #ffd88e;
-  --color-saffron-300: #ffbc53;
-  --color-saffron-400: #ffa22b;
-  --color-saffron-500: #f98307;
-  --color-saffron-600: #a1490a;
-  --color-saffron-700: #8f4008;
-  --color-saffron-800: #94330c;
-  --color-saffron-900: #7a2b0d;
+  /*
+    Cyan accent. 400 is the glow — vivid, for dark surfaces, borders, chart
+    strokes and large numerals. It is 1.9:1 on white and must never carry
+    body text there; use `--accent-ink` (700) when the ground is light.
+  */
+  --color-accent-50: #ecfeff;
+  --color-accent-100: #cffafe;
+  --color-accent-300: #67e8f9;
+  --color-accent-400: #22d3ee;
+  --color-accent-500: #06b6d4;
+  --color-accent-600: #0891b2;
+  --color-accent-700: #0e7490;
+  --color-accent-800: #155e75;
 
+  /* Deadlines, closing-soon, destructive. Urgency, never decoration. */
+  --color-alert-50: #fff1f3;
+  --color-alert-100: #ffe0e5;
+  --color-alert-400: #fb7185;
+  --color-alert-500: #f43f5e;
+  --color-alert-600: #e11d48;
+  --color-alert-700: #be123c;
+
+
+  /*
+    Saffron — the exam category colour, and rating stars.
+
+    It survived the palette swap because it is not decoration: exams are
+    colour-coded saffron across roadmaps, search results and badges, and
+    recolouring them would break a mapping users have already learned. It is
+    retuned toward gold so it sits with indigo rather than fighting it.
+
+    600 is darker than a "natural" 600 on purpose — it has to clear 4.5:1 on
+    --surface-inset, the lightest ground a saffron label ever lands on.
+  */
+  --color-saffron-50: #fff8ea;
+  --color-saffron-100: #ffeecb;
+  --color-saffron-200: #ffdd9e;
+  --color-saffron-300: #f9c46a;
+  --color-saffron-400: #f0a838;
+  --color-saffron-500: #dc8a12;
+  --color-saffron-600: #9c5c08;
+  --color-saffron-700: #8b4f0b;
+  --color-saffron-800: #6f3f0e;
+  --color-saffron-900: #4d2c0c;
+
+  /* Confidence colours — load-bearing, see the header note. */
   --color-verified-50: #ecfdf5;
   --color-verified-100: #d1fae5;
+  --color-verified-400: #34d399;
   --color-verified-600: #059669;
   --color-verified-700: #047857;
 
   --color-estimate-50: #fffbeb;
   --color-estimate-100: #fef3c7;
+  --color-estimate-400: #fbbf24;
   --color-estimate-600: #d97706;
   --color-estimate-700: #b45309;
 
   --color-judgement-50: #f5f3ff;
   --color-judgement-100: #ede9fe;
+  --color-judgement-400: #a78bfa;
   --color-judgement-600: #7c3aed;
   --color-judgement-700: #6d28d9;
 
+  /*
+    Inter Tight for display: same skeleton as Inter so the page reads as one
+    voice, but drawn tight enough that a 48px headline does not look airy.
+    Noto Sans Devanagari is not a fallback here — it is the Hindi face, and it
+    must sit in both stacks or the Hindi locale silently loses its weights.
+  */
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "Noto Sans Devanagari", sans-serif;
-  --font-display: "Source Serif 4", ui-serif, Georgia, "Noto Serif Devanagari", serif;
+    "Noto Sans Devanagari", sans-serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui,
+    "Noto Sans Devanagari", sans-serif;
+
+  /* Motion. Two durations and one curve; more than that and nothing matches. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* ── Surfaces ─────────────────────────────────────────────────────────────
+   Defined on bare :root so a viewer with no explicit choice still gets a
+   complete palette, then overridden twice: once for system-dark (guarded so
+   an explicit light choice wins) and once for explicit dark.
+*/
 :root {
-  /* Warm paper, not white. See the note at the top of this file. */
-  --surface: #fbfaf8;
-  --surface-raised: var(--color-ink-50);
-  --surface-sunken: var(--color-ink-100);
-  --border: var(--color-ink-200);
-  --text: var(--color-ink-900);
-  --text-muted: var(--color-ink-600);
-  --text-faint: var(--color-ink-500);
+  --surface: #ffffff;
+  --surface-raised: #f8f9fb;
+  --surface-sunken: #f1f3f7;
+  --surface-inset: #eaedf3;
+  /* Glass: used only over photography or gradient, never over flat colour. */
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --border: #e4e7ee;
+  --border-strong: #ccd1dd;
+  --text: #0b0d14;
+  --text-muted: #545b6c;
+  /*
+     Not a rounder number by accident. `faint` is still text — de-emphasised,
+     not decorative — so it has to clear 4.5:1 on the LIGHTEST ground it ever
+     sits on, which is --surface-inset, not --surface. #7b8394 read fine on
+     white (3.81) and failed on inset (3.25). This value clears 4.63 there.
+  */
+  --text-faint: #636a78;
+  /* The only cyan that may carry text on this ground. */
+  --accent-ink: var(--color-accent-700);
+  --brand-ink: var(--color-brand-600);
+  /* Rating stars are meaningful graphics, not text: 3:1 minimum, and the
+     vivid 500 only clears that on a dark ground. */
+  --rating-ink: var(--color-saffron-700);
+  --ring: var(--color-brand-500);
+  /* Hero wash. Two stops, low alpha — a tint, not a poster. */
+  --wash: radial-gradient(
+      120% 100% at 12% 0%,
+      rgba(91, 91, 214, 0.13) 0%,
+      transparent 58%
+    ),
+    radial-gradient(90% 80% at 92% 8%, rgba(34, 211, 238, 0.12) 0%, transparent 60%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --surface: var(--color-ink-950);
-    --surface-raised: var(--color-ink-900);
-    --surface-sunken: #0a0c15;
-    --border: var(--color-ink-800);
-    --text: var(--color-ink-50);
-    --text-muted: var(--color-ink-300);
-    --text-faint: var(--color-ink-400);
+    --surface: #0b0d14;
+    --surface-raised: #14171f;
+    --surface-sunken: #07080d;
+    --surface-inset: #1b1f29;
+    --surface-glass: rgba(20, 23, 31, 0.72);
+    --border: #232733;
+    --border-strong: #343a4a;
+    --text: #f5f6f8;
+    --text-muted: #a4abbb;
+    --text-faint: #7f8695;
+    --accent-ink: var(--color-accent-400);
+    --brand-ink: var(--color-brand-300);
+    --rating-ink: var(--color-saffron-400);
+    --ring: var(--color-brand-400);
+    --wash: radial-gradient(
+        120% 100% at 12% 0%,
+        rgba(91, 91, 214, 0.24) 0%,
+        transparent 58%
+      ),
+      radial-gradient(90% 80% at 92% 8%, rgba(34, 211, 238, 0.14) 0%, transparent 60%);
   }
 }
 
 :root[data-theme="dark"] {
-  --surface: var(--color-ink-950);
-  --surface-raised: var(--color-ink-900);
-  --surface-sunken: #0a0c15;
-  --border: var(--color-ink-800);
-  --text: var(--color-ink-50);
-  --text-muted: var(--color-ink-300);
-  --text-faint: var(--color-ink-400);
+  --surface: #0b0d14;
+  --surface-raised: #14171f;
+  --surface-sunken: #07080d;
+  --surface-inset: #1b1f29;
+  --surface-glass: rgba(20, 23, 31, 0.72);
+  --border: #232733;
+  --border-strong: #343a4a;
+  --text: #f5f6f8;
+  --text-muted: #a4abbb;
+  --text-faint: #7f8695;
+  --accent-ink: var(--color-accent-400);
+  --brand-ink: var(--color-brand-300);
+  --rating-ink: var(--color-saffron-400);
+  --ring: var(--color-brand-400);
+  --wash: radial-gradient(
+      120% 100% at 12% 0%,
+      rgba(91, 91, 214, 0.24) 0%,
+      transparent 58%
+    ),
+    radial-gradient(90% 80% at 92% 8%, rgba(34, 211, 238, 0.14) 0%, transparent 60%);
 }
 
 * {
@@ -139,12 +255,8 @@ html {
   it. Those are corrected at the component.
 
   `clip` rather than `hidden` on purpose: `overflow: hidden` on an ancestor
-  silently kills `position: sticky` inside it, and the dashboard, admin and
-  provider navs are all sticky from `lg`. `clip` cuts the overflow without
-  creating a scroll container, so sticky still works.
-
-  Anything genuinely wider than a phone — a data table, a code block — scrolls
-  inside its own `overflow-x-auto` box, which is unaffected by this.
+  silently kills `position: sticky` inside it, and several navs are sticky
+  from `lg`. `clip` cuts the overflow without creating a scroll container.
 */
 html,
 body {
@@ -156,8 +268,9 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -165,16 +278,17 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
 
-/* Visible keyboard focus everywhere — non-negotiable for accessibility. */
+/* Visible keyboard focus everywhere — non-negotiable. */
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .skip-link {
@@ -188,10 +302,10 @@ body {
   padding: 0.6rem 1rem;
   background: var(--color-brand-600);
   color: white;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-/* Utility layer -------------------------------------------------------- */
+/* ── Surface utilities ───────────────────────────────────────────────── */
 
 .surface {
   background: var(--surface);
@@ -208,61 +322,155 @@ body {
 .text-faint {
   color: var(--text-faint);
 }
+.text-brand-ink {
+  color: var(--brand-ink);
+}
+.text-accent-ink {
+  color: var(--accent-ink);
+}
+.text-rating {
+  color: var(--rating-ink);
+}
 
 /*
-  A card is a bordered block, not a floating panel.
+  The hero wash. Applied to a positioned ancestor; the gradient sits behind
+  content and fades out well before the fold so the section below starts on
+  clean ground.
+*/
+.wash {
+  background-image: var(--wash);
+}
 
-  Radius came down from 0.875rem and the shadow went entirely. A pill-shaped
-  card with a drop shadow says "app widget"; a crisp 1px rectangle says
-  "section of a document", which is what these are.
+/*
+  Cards.
+
+  Raised surface + hairline, no shadow at rest. `.card-interactive` is the
+  clickable variant: it lifts 2px and brightens its border on hover, and the
+  transform is the only animated property so the compositor handles it.
+
+  The `:has(a:focus-visible)` rule means keyboard users get the same lift as
+  mouse users when they tab to a card's link, without a second focus style.
 */
 .card {
-  background: var(--surface);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  border-radius: 0.875rem;
+}
+
+.card-interactive {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  transition:
+    transform 0.16s var(--ease-out-soft),
+    border-color 0.16s var(--ease-out-soft),
+    background-color 0.16s var(--ease-out-soft);
+}
+.card-interactive:hover,
+.card-interactive:has(a:focus-visible) {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+@media (hover: none) {
+  /* Touch devices have no hover; the lift would stick after a tap. */
+  .card-interactive:hover {
+    transform: none;
+  }
 }
 
 /*
-  Display type.
+  Chips and tags.
 
-  The serif is for headings and figures only, and it is set tighter than the
-  body: at display sizes the default tracking of a text-optimised serif reads
-  loose. `text-wrap: balance` stops a two-line heading leaving one orphaned
-  word, which is the single most common thing that makes a page look unedited.
+  A chip is interactive (a filter you can toggle); a tag is a label. They look
+  similar deliberately — same family — but only chips get a hover state, so
+  nothing invites a click that does nothing.
 */
-h1, h2, h3 {
-  text-wrap: balance;
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    background-color 0.14s var(--ease-out-soft),
+    border-color 0.14s var(--ease-out-soft),
+    color 0.14s var(--ease-out-soft);
+}
+.chip:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+.chip[aria-pressed="true"],
+.chip[data-active="true"] {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: #fff;
 }
 
-.font-display,
-[class*="font-[family-name:var(--font-display)]"] {
-  letter-spacing: -0.011em;
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 0.4rem;
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* ── Type ─────────────────────────────────────────────────────────────── */
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  font-family: var(--font-display);
+  letter-spacing: -0.021em;
+  line-height: 1.12;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.021em;
+}
+
+/* Big numerals — salaries, counts, countdowns. Tabular so they don't jitter. */
+.numeric {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /*
-  Reading measure.
-
-  Long prose is capped near 68 characters. Beyond that the eye loses the line
-  return, which is why newspapers set narrow columns rather than running text
-  the full width of the page.
+  Reading measure. Long prose caps near 68 characters; beyond that the eye
+  loses the line return, which is why newspapers set narrow columns.
 */
 .prose-plain {
   max-width: 68ch;
 }
-
 .prose-plain h2 {
   font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 600;
-  letter-spacing: -0.011em;
-  margin-top: 1.5em;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.021em;
+  margin-top: 1.6em;
   margin-bottom: 0.5em;
 }
 .prose-plain h3 {
   font-family: var(--font-display);
   font-size: 1.1rem;
   font-weight: 600;
-  margin-top: 1.25em;
+  margin-top: 1.3em;
   margin-bottom: 0.4em;
 }
 .prose-plain p {
@@ -287,7 +495,7 @@ h1, h2, h3 {
   font-weight: 650;
 }
 .prose-plain a {
-  color: var(--color-brand-600);
+  color: var(--brand-ink);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -302,7 +510,8 @@ h1, h2, h3 {
   font-size: 0.9em;
 }
 
-/* Thin scrollbars in scroll regions, without hiding them entirely. */
+/* ── Scroll rails ─────────────────────────────────────────────────────── */
+
 .scroll-slim {
   scrollbar-width: thin;
 }
@@ -311,14 +520,99 @@ h1, h2, h3 {
   height: 8px;
 }
 .scroll-slim::-webkit-scrollbar-thumb {
-  background: var(--color-ink-300);
+  background: var(--border-strong);
   border-radius: 999px;
 }
+
+/*
+  A horizontal rail is the ONE place sideways scrolling is correct: a row of
+  cards that is obviously a row, with snap points, where the user's thumb
+  expects to swipe. It is never used for navigation or for content that has
+  no other route to it.
+
+  `scrollbar-width: none` here rather than `.scroll-slim` because a rail shows
+  its overflow through a peeking next card, which is a better affordance than
+  a scrollbar on touch.
+*/
+.rail {
+  display: flex;
+  gap: 0.875rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* Bleed to the viewport edge so cards run off-screen rather than stopping
+     awkwardly inside the container's padding. */
+  margin-inline: -1rem;
+  padding-inline: 1rem;
+  padding-bottom: 0.25rem;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+.rail > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+@media (min-width: 640px) {
+  .rail {
+    margin-inline: -1.5rem;
+    padding-inline: 1.5rem;
+  }
+}
+
+/* ── Meters and progress ──────────────────────────────────────────────── */
+
+.meter-track {
+  background: var(--surface-inset);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-500) 0%,
+    var(--color-accent-500) 100%
+  );
+  transition: width 0.45s var(--ease-out-soft);
+}
+
+/* ── Loading ──────────────────────────────────────────────────────────── */
+
+/*
+  Skeletons, not spinners. A spinner says "wait"; a skeleton says "this is
+  what is coming and roughly how much of it", which measurably reduces
+  perceived wait. The shimmer is a background-position animation on a
+  gradient — no layout, no repaint of children.
+*/
+@keyframes shimmer {
+  from {
+    background-position: -180% 0;
+  }
+  to {
+    background-position: 180% 0;
+  }
+}
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-sunken) 0%,
+    var(--surface-inset) 40%,
+    var(--surface-sunken) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.5rem;
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -326,13 +620,58 @@ h1, h2, h3 {
   }
 }
 .animate-fade-up {
-  animation: fade-up 0.28s ease-out both;
+  animation: fade-up 0.22s var(--ease-out-soft) both;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .animate-pulse-dot {
   animation: pulse-dot 1.1s ease-in-out infinite;
+}
+
+/*
+  Staggered entrance for a grid of cards. Capped at eight children: past that
+  the last card waits long enough to feel broken rather than choreographed.
+*/
+.stagger > * {
+  animation: fade-up 0.24s var(--ease-out-soft) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(6) { animation-delay: 150ms; }
+.stagger > *:nth-child(7) { animation-delay: 180ms; }
+.stagger > *:nth-child(8) { animation-delay: 210ms; }
+
+/* ── Layout primitives ────────────────────────────────────────────────── */
+
+/*
+  `min-w-0` as a named class, because the fix for the overflow bug needs to be
+  legible at the call site. `.stack-safe` on a grid or flex child says "this
+  child may contain something wider than itself, and must not push".
+*/
+.stack-safe {
+  min-width: 0;
+}
+
+/*
+  Sticky bottom bar on mobile — the primary action on a detail page follows
+  the thumb rather than living at the top where it scrolls away. Respects the
+  home indicator on iOS.
+*/
+.sticky-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

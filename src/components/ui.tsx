@@ -84,7 +84,7 @@ export function Badge({
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
         tones[tone],
         className,
       )}
@@ -113,17 +113,27 @@ function buttonClass({ variant = "primary", size = "md", full }: ButtonBase): st
       "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 " +
       "disabled:bg-[var(--surface-sunken)] disabled:text-[var(--text-faint)] disabled:border disabled:border-[var(--border)]",
     secondary:
-      "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-raised)]",
+      "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-raised)] hover:border-[var(--border-strong)]",
     ghost: "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
-    danger: "bg-red-600 text-white hover:bg-red-700",
+    danger: "bg-alert-600 text-white hover:bg-alert-700",
   };
+  /*
+    Heights, not just padding. 44px is the touch target floor a thumb needs,
+    and padding alone does not guarantee it once a button holds an icon and no
+    label. `sm` is exempt because it only ever appears in dense desktop
+    toolbars where a pointer is doing the work.
+
+    Active scale is 0.98 rather than a colour change: on a phone the finger
+    covers the button, so the feedback has to be visible at the edges.
+  */
   const sizes = {
-    sm: "px-3 py-1.5 text-sm rounded-md gap-1.5",
-    md: "px-4 py-2.5 text-sm rounded-md gap-2",
-    lg: "px-5 py-3 text-base rounded-md gap-2",
+    sm: "px-3 py-1.5 text-sm rounded-lg gap-1.5",
+    md: "min-h-11 px-4 py-2.5 text-sm rounded-xl gap-2",
+    lg: "min-h-12 px-5 py-3 text-base rounded-xl gap-2",
   };
   return cx(
-    "inline-flex items-center justify-center font-medium transition-colors disabled:cursor-not-allowed",
+    "inline-flex items-center justify-center font-medium disabled:cursor-not-allowed",
+    "transition-[background-color,border-color,transform] duration-150 active:scale-[0.98]",
     variants[variant],
     sizes[size],
     full && "w-full",
@@ -175,7 +185,7 @@ export function SectionHeading({
 }) {
   return (
     /*
-      The display serif belongs here, not only on the pages that remembered to
+      The display face belongs here, not only on the pages that remembered to
       ask for it. Most section titles in the product come through this
       component, so setting it once is what makes the type feel like one
       decision rather than a per-page preference.
@@ -184,7 +194,7 @@ export function SectionHeading({
       <div className="min-w-0">
         <h2
           id={id}
-          className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight sm:text-2xl"
+          className="font-display text-xl font-bold sm:text-[1.6rem]"
         >
           {title}
         </h2>

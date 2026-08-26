@@ -48,7 +48,7 @@ export default async function JobsPage({ searchParams }: { searchParams: SearchP
   const adCountryId = resolvedCountry.id;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-[88rem] px-4 py-8 sm:px-6">
       <header className="mb-6">
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight sm:text-4xl">
           Jobs

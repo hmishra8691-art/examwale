@@ -193,3 +193,46 @@ export function budgetBands(currencyCode: string): { label: string; value: numbe
     value,
   }));
 }
+
+/*
+  Enum values are storage, not copy.
+
+  `FULL_TIME` and `ONSITE` are correct in the column and wrong on the screen —
+  they read as a database leak, which is exactly the "generic CRUD dashboard"
+  register this product is trying to avoid. These maps are the single place a
+  stored value becomes something a person reads.
+
+  Unknown values fall back to a de-shouted version of themselves rather than to
+  a placeholder: a new enum member added to the schema then renders as "Part
+  time" instead of "Unknown", which is wrong but harmless, where "Unknown"
+  would look like missing data.
+*/
+function humanise(value: string): string {
+  const lower = value.replace(/_/g, " ").toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+const EMPLOYMENT_TYPE: Record<string, string> = {
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACT: "Contract",
+  INTERNSHIP: "Internship",
+  TEMPORARY: "Temporary",
+  APPRENTICESHIP: "Apprenticeship",
+};
+
+const REMOTE_TYPE: Record<string, string> = {
+  ONSITE: "On-site",
+  REMOTE: "Remote",
+  HYBRID: "Hybrid",
+};
+
+export function employmentTypeLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  return EMPLOYMENT_TYPE[value] ?? humanise(value);
+}
+
+export function remoteTypeLabel(value: string | null | undefined): string {
+  if (!value) return "";
+  return REMOTE_TYPE[value] ?? humanise(value);
+}

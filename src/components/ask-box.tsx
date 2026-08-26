@@ -26,13 +26,13 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="w-full">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           submit(value);
         }}
-        className="rounded-md border bg-[var(--surface)] p-2 focus-within:border-brand-500"
+        className="rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] p-2 shadow-[0_1px_2px_rgba(11,13,20,0.04)] transition-colors focus-within:border-brand-500"
       >
         <label htmlFor="ask" className="sr-only">
           Tell us about yourself and what you want to achieve
@@ -62,8 +62,8 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
       </form>
 
       <div className="mt-4">
-        <p className="mb-2 text-xs uppercase tracking-wider text-faint">Or start with one of these</p>
-        <ul className="flex flex-wrap justify-center gap-2">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-faint">Or start with one of these</p>
+        <ul className="flex flex-wrap gap-2">
           {examples.map((example) => (
             <li key={example}>
               <button
@@ -72,7 +72,7 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
                   setValue(example);
                   submit(example);
                 }}
-                className="rounded-full border bg-[var(--surface)] px-3 py-1.5 text-left text-xs text-muted transition-colors hover:border-brand-400 hover:text-[var(--text)]"
+                className="chip text-left"
               >
                 {example}
               </button>
