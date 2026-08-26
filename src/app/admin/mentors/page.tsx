@@ -18,7 +18,7 @@ export default async function AdminMentorsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="measure">
       <SectionHeading
         title="Mentor applications"
         description="Nobody here is publicly listed. Verify a credential before approving."

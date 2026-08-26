@@ -16,7 +16,7 @@ export default async function AdvertisingReviewPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="measure">
       <SectionHeading
         title="Advertising review"
         description="Campaigns waiting for approval. Nothing runs until it is approved and the advertiser's organisation is verified."

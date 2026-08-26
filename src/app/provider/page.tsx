@@ -44,7 +44,7 @@ export default async function ProviderHubPage() {
     const implied = suggested.filter((s) => s.impliedBy);
 
     return (
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <div className="measure-sm">
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-300">
           Providers
         </p>

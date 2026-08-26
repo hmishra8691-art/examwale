@@ -6,8 +6,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   await requirePage("/dashboard");
 
   return (
-    <div className="mx-auto max-w-[88rem] px-4 py-6 sm:px-6">
-      <div className="grid gap-6 lg:grid-cols-[210px_1fr]">
+    <div className="page py-6">
+      <div className="shell">
         <DashboardNav />
         <div className="min-w-0">{children}</div>
       </div>

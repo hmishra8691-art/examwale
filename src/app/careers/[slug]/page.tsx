@@ -71,7 +71,7 @@ export default async function CareerDetailPage({ params }: { params: Params }) {
   const nextSteps = career.nextSteps as string[];
 
   return (
-    <article className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <article className="page page-measure py-8">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <Link href="/careers" className="hover:text-[var(--text)]">
           Careers

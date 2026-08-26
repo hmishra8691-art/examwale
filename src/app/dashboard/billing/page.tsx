@@ -26,7 +26,7 @@ export default async function BillingPage() {
     overview;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="measure-md">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionHeading title={t.billing.title} />
         <ButtonLink href="/pricing" variant="secondary">

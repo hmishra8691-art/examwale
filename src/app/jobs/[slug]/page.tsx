@@ -70,7 +70,7 @@ export default async function JobDetailPage({ params }: { params: Params }) {
   const preferred = (job.skillsPreferred ?? []) as string[];
 
   return (
-    <article className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <article className="page page-measure-md py-8">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <Link href="/jobs" className="hover:text-[var(--text)]">
           Jobs

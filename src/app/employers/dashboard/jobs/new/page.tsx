@@ -13,7 +13,7 @@ export default async function NewJobPage() {
   if (!membership) redirect("/employers/register");
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <div className="page page-measure-sm py-10">
       <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
         Post a job
       </h1>

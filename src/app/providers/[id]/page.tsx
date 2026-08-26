@@ -31,7 +31,7 @@ export default async function ProviderPage({ params }: Props) {
   const { provider, courses } = data;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <Link href="/courses" className="text-sm text-muted hover:underline">
         ← All courses
       </Link>

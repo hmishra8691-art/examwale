@@ -53,7 +53,7 @@ export default async function EmployerJobDetailPage({ params }: Props) {
   const flags = reviews.find((review) => review.automatedFlags?.length)?.automatedFlags ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <Link href="/employers/dashboard" className="text-sm text-muted hover:underline">
         ← Back to dashboard
       </Link>

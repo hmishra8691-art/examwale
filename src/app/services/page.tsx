@@ -31,7 +31,7 @@ export default async function ServicesPage({ searchParams }: Props) {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <SectionHeading
         title="Professional services"
         description="Help with a specific thing, from people who do it for a living."

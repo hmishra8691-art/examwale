@@ -305,6 +305,115 @@ body {
   border-radius: 8px;
 }
 
+/* ── The page frame ──────────────────────────────────────────────────── */
+
+/*
+  One frame, used by the header, the footer, every shell and every page.
+
+  Before this existed, containers were declared ad hoc at each page: five
+  different widths (48rem to 88rem) each centred with `mx-auto`. Because a
+  centred container's left edge moves with its own width, the header logo, a
+  listing page and a detail page all began at a different x on the same
+  screen — and a page rendered inside a shell declared a *second* centred
+  container inside the first, which is what put a band of dead space either
+  side of the content next to the sidebar.
+
+  Two rules follow, and they are the whole system:
+
+    1. The frame is declared once, by whoever owns the outermost box — a
+       shell layout, or a standalone page. Never twice on one screen.
+    2. Reading width is a `.measure` on the content *inside* the frame, and
+       it is left-aligned. Narrowing by centring is what created the gaps;
+       narrowing by measure keeps the left edge where the eye expects it.
+
+  Padding steps with the viewport rather than staying at 1rem, so the frame
+  breathes on a laptop without the content drifting away from the edge on a
+  phone, where every pixel of width is content.
+*/
+.page {
+  width: 100%;
+  max-width: var(--page-max, 88rem);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page {
+    padding-inline: 2rem;
+  }
+}
+
+/*
+  Reading widths. Deliberately no `margin-inline: auto` — that omission is the
+  point. A `.measure` sits at the left edge of its frame, so a prose page and a
+  card grid start at the same place.
+
+  Values match the Tailwind scale these replaced (5xl / 4xl / 3xl) so line
+  lengths are unchanged from before the alignment fix; only the position moved.
+*/
+.measure {
+  max-width: 64rem;
+}
+.measure-md {
+  max-width: 56rem;
+}
+.measure-sm {
+  max-width: 48rem;
+}
+
+/*
+  The shell grid: a sidebar and a main column, used by the dashboard, provider
+  and admin sections.
+
+  One width and one breakpoint for all three. They previously had 210px, 190px
+  and an `auto` column, switching at different breakpoints, so the main column
+  began at a different x in each section and moving between them shifted the
+  whole page sideways.
+
+  Below `lg` the two stack and the nav wraps to chips above the content, which
+  is why the sidebar width is not expressed until then.
+*/
+.shell {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    grid-template-columns: 13rem minmax(0, 1fr);
+  }
+}
+
+/*
+  A frame that holds its own content to a reading width.
+
+  For a standalone page the frame and the measure are the same element, and a
+  page cannot be both `max-width: 88rem` and `max-width: 64rem`. Capping the
+  direct children instead resolves that on one element, so no page needed a
+  wrapper div added around its whole tree purely to get its left edge right.
+  The children are blocks, so they sit at the frame's left edge — which is the
+  same edge the header logo and the sidebars use.
+
+  Wrapped in `:where()` to strip the selector's specificity to zero, so a child
+  that genuinely wants the full frame — a rail that bleeds, a full-width hero —
+  opts out with an ordinary `max-w-none` and wins.
+*/
+:where(.page-measure) > * {
+  max-width: 64rem;
+}
+:where(.page-measure-md) > * {
+  max-width: 56rem;
+}
+:where(.page-measure-sm) > * {
+  max-width: 48rem;
+}
+
 /* ── Surface utilities ───────────────────────────────────────────────── */
 
 .surface {

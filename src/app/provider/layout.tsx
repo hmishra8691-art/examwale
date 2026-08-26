@@ -50,8 +50,8 @@ export default async function ProviderLayout({ children }: { children: React.Rea
   items.push({ href: "/provider/profile", label: "Profile" });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-      <div className="grid gap-6 lg:grid-cols-[190px_1fr]">
+    <div className="page py-6">
+      <div className="shell">
         <ProviderNav items={items} />
         <div className="min-w-0">{children}</div>
       </div>

@@ -19,7 +19,7 @@ export default async function StudentCohortsPage() {
   const { memberships, shared, notShared } = await cohortDisclosureForUser(session.sub);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <div className="measure-sm">
       <SectionHeading
         title="Your institutions"
         description="Cohorts you've been invited to, and exactly what joining shares."

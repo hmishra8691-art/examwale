@@ -17,7 +17,7 @@ export default async function AdminCountriesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="measure">
       <SectionHeading
         title="Countries"
         description="What the product covers, where, and whether a market is ready to open."

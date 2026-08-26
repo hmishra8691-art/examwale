@@ -38,7 +38,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className="page page-measure-md py-8">
       <header className="mb-6">
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
           Search

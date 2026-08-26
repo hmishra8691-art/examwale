@@ -22,7 +22,7 @@ export default async function NotificationsPage() {
   const unread = notifications.filter((n) => !n.readAt).length;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+    <div className="measure-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionHeading title={t.notifications.title} />
         {unread ? <MarkAllRead label={t.notifications.markAllRead} /> : null}

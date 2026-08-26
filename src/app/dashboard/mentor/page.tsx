@@ -45,7 +45,7 @@ export default async function MentorDashboardPage() {
   const verifiedCount = credentials.filter((c) => c.status === "VERIFIED").length;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+    <div className="measure-md">
       <SectionHeading
         title="Mentor dashboard"
         description="Your requests, your hours, and the credentials your listing depends on."

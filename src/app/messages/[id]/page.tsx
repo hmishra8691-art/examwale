@@ -24,7 +24,7 @@ export default async function ConversationPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className="page page-measure-sm py-8">
       <Link href="/messages" className="text-sm text-muted hover:underline">
         ← All messages
       </Link>

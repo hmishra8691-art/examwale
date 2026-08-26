@@ -19,7 +19,7 @@ export default async function RegisterOrganisationPage() {
   const country = await getCountry();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
+    <div className="page page-measure-sm py-12">
       <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
         Register your organisation
       </h1>

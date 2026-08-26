@@ -57,7 +57,7 @@ export default async function ExamDetailPage({ params }: { params: Params }) {
   const totalWeight = detail.topics.reduce((sum, topic) => sum + topic.weightEstimate, 0);
 
   return (
-    <article className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <article className="page page-measure py-8">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <Link href="/exams" className="hover:text-[var(--text)]">
           Government exams

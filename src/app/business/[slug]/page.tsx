@@ -66,7 +66,7 @@ export default async function BusinessDetailPage({ params }: { params: Params })
   const monthlyFixed = fixedCosts.reduce((sum, cost) => sum + cost.approxMonthly, 0);
 
   return (
-    <article className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <article className="page page-measure py-8">
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <Link href="/business" className="hover:text-[var(--text)]">
           Business ideas

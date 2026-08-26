@@ -73,7 +73,7 @@ export default async function MentorProfilePage({ params }: Props) {
   const publishedZone = availability[0]?.timezone ?? "UTC";
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <Link href="/mentors" className="text-sm text-muted hover:underline">
         ← All mentors
       </Link>

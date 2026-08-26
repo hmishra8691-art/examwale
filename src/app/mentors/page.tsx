@@ -54,7 +54,7 @@ export default async function MentorsPage({ searchParams }: Props) {
   const freeOnly = flag(get("free"));
 
   return (
-    <div className="mx-auto max-w-[88rem] px-4 py-10 sm:px-6">
+    <div className="page py-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <SectionHeading title={t.mentors.title} description={t.mentors.subtitle} />
 

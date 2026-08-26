@@ -59,7 +59,7 @@ export default async function CourseDetailPage({ params }: Props) {
     : null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <Link href="/courses" className="text-sm text-muted hover:underline">
         ← All courses
       </Link>

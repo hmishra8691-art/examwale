@@ -34,7 +34,7 @@ export default async function EmployersLandingPage() {
   const membership = session ? await getPrimaryOrganisation(session.sub) : null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+    <div className="page page-measure py-12">
       <header className="max-w-2xl">
         <p className="text-sm font-medium text-brand-600">For employers</p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight sm:text-4xl">

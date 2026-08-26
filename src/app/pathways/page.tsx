@@ -54,7 +54,7 @@ export default async function PathwaysPage() {
   const careerBySlug = new Map(careers.map((career) => [career.slug, career]));
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="page page-measure py-8">
       <header className="mb-6">
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight sm:text-4xl">
           After Class 10 and Class 12

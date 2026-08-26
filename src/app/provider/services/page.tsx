@@ -24,7 +24,7 @@ export default async function ProviderServicesPage() {
 
   if (!active.includes("SERVICE_PROVIDER")) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <div className="measure-sm">
         <SectionHeading title="Services" />
         <div className="mt-5">
           <Callout tone="warn" title="Not approved for this yet">

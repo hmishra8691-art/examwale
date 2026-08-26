@@ -14,7 +14,7 @@ export default async function InstitutionsPage() {
 
   if (!membership) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+      <div className="page page-measure-sm py-12">
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">
           {t.b2b.title}
         </h1>
@@ -53,7 +53,7 @@ export default async function InstitutionsPage() {
   const totalInvited = cohorts.reduce((sum, row) => sum + row.invited, 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+    <div className="page page-measure py-10">
       <SectionHeading
         title={membership.organisation.name}
         description="Cohort reporting. Aggregates only, and only for students who joined."

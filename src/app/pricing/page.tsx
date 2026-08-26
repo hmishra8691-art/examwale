@@ -49,7 +49,7 @@ export default async function PricingPage() {
   const canCharge = getPaymentProvider().canCharge;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="page page-measure py-12">
       <SectionHeading
         title="Plans"
         description="The free plan is the whole product with a daily cap on the expensive parts. It is not a trial."

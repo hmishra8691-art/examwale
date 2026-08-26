@@ -212,7 +212,7 @@ export default async function HomePage() {
           data as the rail below, surfaced above the fold so the first screen
           already contains something to click.
         */}
-        <div className="relative mx-auto grid max-w-[88rem] gap-8 px-4 pb-10 pt-10 sm:px-6 sm:pb-12 sm:pt-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
+        <div className="page relative grid gap-8 pb-10 pt-10 sm:pb-12 sm:pt-14 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start lg:gap-12">
           <div className="stack-safe">
             <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent-ink">
               <span aria-hidden className="size-1.5 rounded-full bg-current animate-pulse-dot" />
@@ -289,7 +289,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-[88rem] space-y-12 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-14">
+      <div className="page space-y-12 py-10 sm:space-y-14 sm:py-14">
         {/* Closing soon ------------------------------------------------- */}
         {closingExams.length ? (
           <DiscoverySection
