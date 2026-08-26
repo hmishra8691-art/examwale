@@ -28,7 +28,7 @@ export const GET = route(async (_request: Request, context: Context) => {
 
 export const POST = route(async (request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`interview-answer:${session.sub}`, 60, 60 * 60);
+  await consume(`interview-answer:${session.sub}`, 60, 60 * 60);
   await assertWithinQuota(session.sub, session.plan);
 
   const { id } = await context.params;

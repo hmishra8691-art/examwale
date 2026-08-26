@@ -37,6 +37,7 @@ import {
   exams,
   govOrganisations,
   jobPostings,
+  jobPublicationPeriods,
   knowledgeChunks,
   learningResources,
   occupationSkills,
@@ -605,7 +606,10 @@ async function seedJobs(ref: Awaited<ReturnType<typeof seedReference>>) {
       ? (await db.query.occupations.findFirst({ where: eq(occupations.slug, job.occupationSlug) }))?.id ?? null
       : null;
 
-    await db.insert(jobPostings).values({
+    const postedAt = new Date(now - index * 2 * 86_400_000);
+    const expiresAt = new Date(now + 45 * 86_400_000);
+
+    const [posting] = await db.insert(jobPostings).values({
       companyId,
       occupationId,
       title: job.title,
@@ -628,8 +632,22 @@ async function seedJobs(ref: Awaited<ReturnType<typeof seedReference>>) {
       // Marked so demo listings can be identified and purged before real
       // listings are ingested.
       source: "seed",
-      postedAt: new Date(now - index * 2 * 86_400_000),
-      expiresAt: new Date(now + 45 * 86_400_000),
+      postedAt,
+      expiresAt,
+    }).returning({ id: jobPostings.id });
+
+    /*
+     * Every live posting needs its first publication period.
+     *
+     * Without one its history reads as "never published" and the first revival
+     * would open period 1 rather than period 2 — so a fresh install would need
+     * the backfill script to be correct, which is not what a seed is for.
+     */
+    await db.insert(jobPublicationPeriods).values({
+      jobPostingId: posting.id,
+      sequence: 1,
+      publishedAt: postedAt,
+      expiresAt,
     });
     count += 1;
   }

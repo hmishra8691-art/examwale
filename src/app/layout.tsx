@@ -6,6 +6,8 @@ import { getSession } from "@/modules/auth/session";
 import { getLocale } from "@/modules/i18n/service";
 import { unreadCount } from "@/modules/notifications/service";
 import { getCountry, listActiveCountries } from "@/modules/geo/service";
+import { isProviderAccount } from "@/modules/providers/service";
+import { unreadMessageCount } from "@/modules/messaging/service";
 
 export const metadata: Metadata = {
   title: {
@@ -39,11 +41,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
    * signed-in visitor — an anonymous page render should not touch the
    * notifications table at all.
    */
-  const [locale, unread, country, countries] = await Promise.all([
+  const [locale, unread, country, countries, isProvider, unreadMessages] = await Promise.all([
     getLocale(),
     session ? unreadCount(session.sub).catch(() => 0) : Promise.resolve(0),
     getCountry(),
     listActiveCountries(),
+    // Not put in the session token deliberately: a profile created five minutes
+    // ago must appear in the nav now, and a JWT claim would not until the access
+    // token refreshed.
+    session ? isProviderAccount(session.sub).catch(() => false) : Promise.resolve(false),
+    session ? unreadMessageCount(session.sub).catch(() => 0) : Promise.resolve(0),
   ]);
 
   return (
@@ -66,6 +73,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           unreadCount={unread}
           countryIso={country.isoCode}
           countries={countries.map((entry) => ({ isoCode: entry.isoCode, name: entry.name }))}
+          isProvider={isProvider}
+          unreadMessages={unreadMessages}
         />
         <main id="main">{children}</main>
         <SiteFooter />

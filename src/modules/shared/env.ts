@@ -60,14 +60,31 @@ export const env = {
   get aiPremiumDailyLimit() {
     return num("AI_PREMIUM_DAILY_MESSAGE_LIMIT", 500);
   },
+  /**
+   * 'postgres' | 'local'.
+   *
+   * Defaults to postgres because it works on every host without extra
+   * configuration. 'local' is a development convenience and is refused outright
+   * on a serverless host, where it would silently discard every upload.
+   */
   get storageDriver() {
-    return optional("STORAGE_DRIVER", "local");
+    return optional("STORAGE_DRIVER", "postgres");
   },
   get storageLocalDir() {
     return optional("STORAGE_LOCAL_DIR", "./.storage");
   },
   get maxUploadBytes() {
     return num("MAX_UPLOAD_BYTES", 10 * 1024 * 1024);
+  },
+  /**
+   * Shared secret for the scheduled-task endpoint.
+   *
+   * Empty means scheduled tasks are disabled and the route refuses every call.
+   * Failing closed matters here: the endpoint sends email and writes rows, so an
+   * unset variable must not leave a public trigger behind.
+   */
+  get cronSecret() {
+    return optional("CRON_SECRET");
   },
   get appUrl() {
     return optional("APP_URL", "http://localhost:3000");

@@ -3,5 +3,6 @@ node_modules/
 .storage/
 *.tsbuildinfo
 next-env.d.ts
+.env
 .env.local
 .DS_Store

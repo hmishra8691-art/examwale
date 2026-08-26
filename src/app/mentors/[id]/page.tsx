@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMentorById } from "@/modules/mentors/service";
+import { HOLD_MINUTES, getMentorById, offeredSlots } from "@/modules/mentors/service";
 import { getSession, isAdmin } from "@/modules/auth/session";
+import { getCountryIso } from "@/modules/geo/service";
 import { getMessages } from "@/modules/i18n/service";
+import { zoneAbbreviation } from "@/modules/shared/timezone";
 import { formatDate, formatMoney } from "@/modules/shared/format";
 import { SessionRequestForm } from "@/components/mentor-forms";
+import { Avatar } from "@/components/avatar";
 import { Badge, Callout, Card, SectionHeading } from "@/components/ui";
 
 type Props = { params: Promise<{ id: string }> };
@@ -48,7 +51,26 @@ export default async function MentorProfilePage({ params }: Props) {
   }
 
   const { mentor, name, rating, credentials, availability, reviews, isOwner } = data;
-  const t = await getMessages();
+  const [t, countryIso] = await Promise.all([getMessages(), getCountryIso()]);
+
+  /*
+   * Slots are generated on the server, not in the browser.
+   *
+   * The picker used to build them from the weekly pattern using the visitor's
+   * own clock, while the booking endpoint checked them against the server's —
+   * so a seeker could pick a time the API would then refuse. Both now read the
+   * same generator, and each slot arrives carrying its label in the mentor's
+   * zone and in the viewer's.
+   */
+  const { slots, viewerZone } = await offeredSlots({
+    mentorId: mentor.id,
+    viewerUserId: session?.sub ?? null,
+    viewerCountryIso: countryIso,
+  });
+
+  // The zone the mentor's published hours are written in. Was hardcoded to IST,
+  // which was wrong the moment a mentor outside India set their hours.
+  const publishedZone = availability[0]?.timezone ?? "UTC";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
@@ -77,19 +99,24 @@ export default async function MentorProfilePage({ params }: Props) {
         </div>
       ) : null}
 
-      <header className="mt-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            {name ?? "Mentor"}
-          </h1>
-          {mentor.credentialVerifiedAt ? (
-            <Badge tone="good">{t.mentors.credentialsVerified}</Badge>
-          ) : null}
+      <header className="mt-4 flex flex-wrap items-start gap-5">
+        <Avatar userId={data.userId} name={name} hash={data.avatarHash} size="lg" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+              {name ?? "Mentor"}
+            </h1>
+            {mentor.credentialVerifiedAt ? (
+              <Badge tone="good">{t.mentors.credentialsVerified}</Badge>
+            ) : null}
+          </div>
+          <p className="mt-2 text-lg text-muted">{mentor.headline}</p>
+          <p className="mt-1 text-sm text-faint">
+            {[mentor.currentRole, mentor.currentOrganisation, mentor.city]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         </div>
-        <p className="mt-2 text-lg text-muted">{mentor.headline}</p>
-        <p className="mt-1 text-sm text-faint">
-          {[mentor.currentRole, mentor.currentOrganisation, mentor.city].filter(Boolean).join(" · ")}
-        </p>
       </header>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[2fr_1fr]">
@@ -208,7 +235,12 @@ export default async function MentorProfilePage({ params }: Props) {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-faint">IST</p>
+              <p className="mt-2 text-xs text-faint">
+                {zoneAbbreviation(new Date(), publishedZone)}
+                {publishedZone !== viewerZone ? (
+                  <> · shown in the mentor&rsquo;s timezone</>
+                ) : null}
+              </p>
             </Card>
           ) : null}
 
@@ -220,9 +252,9 @@ export default async function MentorProfilePage({ params }: Props) {
               <div className="mt-4">
                 <SessionRequestForm
                   mentorId={mentor.id}
-                  availability={availability}
-                  sessionMinutes={mentor.sessionMinutes}
+                  slots={slots}
                   signedIn={Boolean(session)}
+                  holdMinutes={HOLD_MINUTES}
                 />
               </div>
             </Card>

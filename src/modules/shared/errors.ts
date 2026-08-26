@@ -56,3 +56,33 @@ export class RateLimitError extends AppError {
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
+
+/**
+ * The Postgres error code behind a thrown error, if there is one.
+ *
+ * Drizzle wraps a driver error in its own `Error` and hangs the original off
+ * `cause`, so `(error as {code}).code` — the obvious thing to write, and what
+ * two call sites here did write — is always undefined. The unique-violation
+ * branch guarding those inserts therefore never ran: a genuine race for a
+ * mentorship slot returned a 500 with a Postgres constraint name in the
+ * response instead of "that slot has just been taken".
+ *
+ * Walks the cause chain rather than checking one level, because a wrapper may
+ * itself be wrapped, and stops at a small depth so a cyclic cause cannot spin.
+ */
+export function postgresErrorCode(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && /^[0-9A-Z]{5}$/.test(code)) return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
+/** Postgres 23505: unique constraint violated. */
+export const PG_UNIQUE_VIOLATION = "23505";
+
+export function isUniqueViolation(error: unknown): boolean {
+  return postgresErrorCode(error) === PG_UNIQUE_VIOLATION;
+}

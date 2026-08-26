@@ -14,6 +14,7 @@ import {
   type Feasibility,
   type StudyPlanShape,
 } from "@/db/schema";
+import { likePattern } from "@/modules/shared/params";
 import { NotFoundError } from "@/modules/shared/errors";
 import { getCountryIso } from "@/modules/geo/service";
 
@@ -34,7 +35,7 @@ export async function listExams(filters: ExamFilters = {}) {
   const conditions: SQL[] = [eq(exams.status, "PUBLISHED"), eq(countries.isoCode, countryIso)];
   if (filters.category) conditions.push(eq(exams.category, filters.category));
   if (filters.search?.trim()) {
-    const term = `%${filters.search.trim().toLowerCase()}%`;
+    const term = likePattern(filters.search);
     conditions.push(
       or(
         sql`lower(${exams.name}) LIKE ${term}`,

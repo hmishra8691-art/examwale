@@ -22,7 +22,7 @@ const bodySchema = z
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`resume-review:${session.sub}`, 12, 60 * 60);
+  await consume(`resume-review:${session.sub}`, 12, 60 * 60);
   await assertWithinQuota(session.sub, session.plan);
 
   const body = bodySchema.parse(await readJson(request));

@@ -4,6 +4,7 @@ import { requirePage } from "@/modules/auth/session";
 import { listSessionsForSeeker } from "@/modules/mentors/service";
 import { getEntitlements } from "@/modules/billing/entitlements";
 import { formatDate } from "@/modules/shared/format";
+import { MessageLink } from "@/components/message-link";
 import { ReviewForm, SessionActions } from "@/components/mentor-forms";
 import { Badge, ButtonLink, Card, EmptyState, SectionHeading } from "@/components/ui";
 
@@ -105,6 +106,12 @@ export default async function SeekerMentorshipPage() {
               ) : null}
 
               <div className="mt-3">
+                <MessageLink
+                  withUserId={row.mentorUserId}
+                  contextType="MENTORSHIP"
+                  contextId={row.session.id}
+                  label="Message this mentor"
+                />
                 <SessionActions
                   sessionId={row.session.id}
                   status={row.session.status}

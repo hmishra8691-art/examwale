@@ -44,6 +44,34 @@ async function main() {
 
   const pool2 = new Pool({ connectionString: url });
 
+  /*
+   * Index predicates drizzle-kit push does not diff.
+   *
+   * `push` compares columns and index membership but not a partial index's WHERE
+   * clause, so narrowing one silently leaves the old definition in place. This
+   * one matters: unconditional, it let a cancelled or declined session reserve
+   * its slot forever, and the symptom looked exactly like a legitimate
+   * double-booking conflict. Dropped and recreated explicitly.
+   */
+  console.log("• enforcing partial index predicates");
+  await pool2.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_indexes
+        WHERE indexname = 'mentorship_slot_uq'
+          AND indexdef NOT LIKE '%WHERE%'
+      ) THEN
+        DROP INDEX mentorship_slot_uq;
+      END IF;
+    END $$;
+  `);
+  await pool2.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS mentorship_slot_uq
+      ON mentorship_sessions (mentor_id, scheduled_at)
+      WHERE status IN ('HELD', 'REQUESTED', 'ACCEPTED');
+  `);
+
   console.log("• creating search indexes");
   await pool2.query(`
     CREATE INDEX IF NOT EXISTS knowledge_chunks_fts_idx
@@ -60,6 +88,10 @@ async function main() {
   await pool2.query(`
     CREATE INDEX IF NOT EXISTS exams_fts_idx
       ON exams USING GIN (to_tsvector('english', name || ' ' || short_name || ' ' || description));
+  `);
+  await pool2.query(`
+    CREATE INDEX IF NOT EXISTS messages_fts_idx
+      ON messages USING GIN (to_tsvector('english', body));
   `);
   await pool2.query(`
     CREATE INDEX IF NOT EXISTS jobs_fts_idx

@@ -40,7 +40,7 @@ export const GET = route(async (request: Request) => {
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`mentor:apply:${session.sub}`, 3, 24 * 60 * 60);
+  await consume(`mentor:apply:${session.sub}`, 3, 24 * 60 * 60);
 
   const body = applySchema.parse(await readJson(request));
   const mentor = await applyAsMentor({ userId: session.sub, ...body });

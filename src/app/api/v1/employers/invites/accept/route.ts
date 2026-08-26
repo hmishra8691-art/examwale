@@ -14,7 +14,7 @@ export const POST = route(async (request: Request) => {
   const session = await requireSession();
   // Token guessing is the threat here, so the limit is on attempts, not on the
   // account: a slow drip from many accounts is still a drip from one client.
-  consumeByClient("invite:accept", clientIp(request), { perIp: 20, globalFallback: 200 }, 60 * 60);
+  await consumeByClient("invite:accept", clientIp(request), { perIp: 20, globalFallback: 200 }, 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
 

@@ -411,14 +411,33 @@ export function PostingActions({ jobId, status }: { jobId: string; status: strin
     }
   }
 
-  async function close() {
+  /**
+   * One handler for every lifecycle action.
+   *
+   * The server decides what is legal from the current state, so this does not
+   * duplicate the rules — a button that should not be offered is hidden below,
+   * and one that slips through gets a specific refusal rather than a shrug.
+   */
+  async function act(action: "close" | "revive" | "archive" | "restore") {
     setBusy(true);
     setError(null);
+    setMessage(null);
     try {
-      await fetch(`/api/v1/employers/jobs/${jobId}`, { method: "DELETE" });
+      const response = await fetch(`/api/v1/employers/jobs/${jobId}/lifecycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? "That didn't work.");
+      if (action === "revive") {
+        setMessage(
+          "Live again, with a fresh 30-day run. Everything applicants sent last time is still here.",
+        );
+      }
       router.refresh();
-    } catch {
-      setError("Couldn't close that posting.");
+    } catch (caught) {
+      setError((caught as Error).message);
     } finally {
       setBusy(false);
     }
@@ -448,17 +467,44 @@ export function PostingActions({ jobId, status }: { jobId: string; status: strin
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {status !== "ACTIVE" ? (
+        {status === "DRAFT" || status === "REJECTED" ? (
           <Button onClick={submit} disabled={busy} size="sm">
             {busy ? "Submitting…" : "Submit for review"}
           </Button>
         ) : null}
-        {status !== "CLOSED" ? (
-          <Button onClick={close} disabled={busy} size="sm" variant="secondary">
+        {status === "EXPIRED" || status === "CLOSED" ? (
+          <Button onClick={() => act("revive")} disabled={busy} size="sm">
+            {busy ? "Reviving…" : "Run this posting again"}
+          </Button>
+        ) : null}
+        {status === "ACTIVE" ? (
+          <Button onClick={() => act("close")} disabled={busy} size="sm" variant="secondary">
             Close posting
           </Button>
         ) : null}
+        {status === "ARCHIVED" ? (
+          <Button onClick={() => act("restore")} disabled={busy} size="sm">
+            Restore to draft
+          </Button>
+        ) : null}
+        {status !== "ARCHIVED" && status !== "SUSPENDED" ? (
+          <Button onClick={() => act("archive")} disabled={busy} size="sm" variant="secondary">
+            Archive
+          </Button>
+        ) : null}
       </div>
+      {status === "EXPIRED" || status === "CLOSED" ? (
+        <p className="text-xs leading-relaxed text-faint">
+          Running it again does not go back through review — the posting already passed. Editing it
+          does, because a changed role is a different role.
+        </p>
+      ) : null}
+      {status === "SUSPENDED" ? (
+        <p className="text-xs leading-relaxed text-faint">
+          A moderator took this down. Reply to the note above to have it looked at again — it cannot
+          be relisted from here.
+        </p>
+      ) : null}
     </div>
   );
 }

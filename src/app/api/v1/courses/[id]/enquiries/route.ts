@@ -22,9 +22,9 @@ type Context = { params: Promise<{ id: string }> };
  */
 export const POST = route(async (request: Request, context: Context) => {
   const session = await getSession();
-  if (session) consume(`course:enquiry:user:${session.sub}`, 20, 24 * 60 * 60);
+  if (session) await consume(`course:enquiry:user:${session.sub}`, 20, 24 * 60 * 60);
   else
-    consumeByClient(
+    await consumeByClient(
       "course:enquiry",
       clientIp(request),
       { perIp: 10, globalFallback: 400 },

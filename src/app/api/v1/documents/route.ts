@@ -15,7 +15,7 @@ export const GET = route(async () => {
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`upload:${session.sub}`, 20, 60 * 60);
+  await consume(`upload:${session.sub}`, 20, 60 * 60);
 
   const form = await request.formData().catch(() => null);
   if (!form) throw new ValidationError("Send the file as multipart form data.");

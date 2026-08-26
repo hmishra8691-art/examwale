@@ -420,15 +420,53 @@ export function ChatWorkspace({
  * lists, links, rules) covers everything the prompts ask for.
  */
 function Markdown({ text }: { text: string }) {
+  /*
+   * Escapes the four characters that matter, not the two that are obvious.
+   *
+   * This escaped only `&`, `<` and `>`, which is enough for text between tags
+   * and not enough for text inside an attribute. The link rule below drops a
+   * captured URL into a double-quoted `href`, so a quote in that URL closed the
+   * attribute and everything after it parsed as more attributes:
+   *
+   *   [x](/a"onmouseover="alert(1))  →  <a href="/a"onmouseover="alert(1)">x</a>
+   *
+   * The output goes through `dangerouslySetInnerHTML`, which bypasses React's
+   * own URL sanitising entirely, so nothing downstream would have caught it.
+   * Found by an adversarial pass; the file's own comment claimed it was
+   * "escaping-first", which it was — just not completely.
+   */
   const escape = (value: string) =>
-    value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  /**
+   * Links are restricted to same-site paths, and checked after escaping.
+   *
+   * The regex already required a leading `/`, which is the right instinct — but
+   * a defence that depends on one regex being exactly right is one edit away
+   * from being wrong, so the captured value is validated as well: a single
+   * leading slash, and no character that could terminate an attribute.
+   */
+  const safeHref = (href: string): string | null =>
+    /^\/[A-Za-z0-9\-._~!$&*+,;=:@%/?#[\]()']*$/.test(href) && !href.startsWith("//")
+      ? href
+      : null;
 
   const inline = (value: string) =>
     escape(value)
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>")
       .replace(/`([^`]+)`/g, "<code>$1</code>")
-      .replace(/\[([^\]]+)\]\((\/[^)\s]*)\)/g, '<a href="$2">$1</a>');
+      .replace(/\[([^\]]+)\]\((\/[^)\s]*)\)/g, (whole, label: string, href: string) => {
+        const safe = safeHref(href);
+        // An unsafe target renders as plain text rather than vanishing, so a
+        // mangled link is visible rather than silently disappearing.
+        return safe ? `<a href="${safe}">${label}</a>` : whole;
+      });
 
   const blocks: string[] = [];
   let listBuffer: string[] = [];

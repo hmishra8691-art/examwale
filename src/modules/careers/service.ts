@@ -17,6 +17,7 @@ import {
   skills,
   sources,
 } from "@/db/schema";
+import { likePattern } from "@/modules/shared/params";
 import { NotFoundError } from "@/modules/shared/errors";
 import { getCountryIso } from "@/modules/geo/service";
 
@@ -86,7 +87,7 @@ export async function listCareers(filters: CareerFilters = {}) {
     conditions.push(inArray(careerProfiles.difficultyLevel, filters.difficulty as never[]));
   }
   if (filters.search?.trim()) {
-    const term = `%${filters.search.trim().toLowerCase()}%`;
+    const term = likePattern(filters.search);
     conditions.push(
       or(
         sql`lower(${occupations.name}) LIKE ${term}`,

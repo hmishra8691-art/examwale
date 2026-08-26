@@ -21,7 +21,7 @@ export const GET = route(async () => {
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`interview:${session.sub}`, 15, 60 * 60);
+  await consume(`interview:${session.sub}`, 15, 60 * 60);
   await assertWithinQuota(session.sub, session.plan);
 
   const body = bodySchema.parse(await readJson(request));

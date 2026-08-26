@@ -17,7 +17,7 @@ export const GET = route(async () => {
 
 export const PUT = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`notifications:prefs:${session.sub}`, 200, 60 * 60);
+  await consume(`notifications:prefs:${session.sub}`, 200, 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
   await setPreference({ userId: session.sub, ...body });

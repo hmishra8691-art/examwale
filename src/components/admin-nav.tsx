@@ -11,9 +11,13 @@ const LINKS = [
   { href: "/admin/organisations", label: "Verification" },
   { href: "/admin/job-moderation", label: "Job moderation" },
   { href: "/admin/mentors", label: "Mentors" },
+  { href: "/admin/providers", label: "Provider applications" },
+  { href: "/admin/services", label: "Service listings" },
+  { href: "/admin/reports", label: "Reports" },
   { href: "/admin/advertising", label: "Advertising" },
   { href: "/admin/countries", label: "Countries" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/scheduler", label: "Scheduled tasks" },
   { href: "/admin/audit", label: "Audit log" },
 ];
 

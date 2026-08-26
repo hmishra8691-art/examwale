@@ -19,7 +19,7 @@ const bodySchema = z.object({
 
 export const PUT = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`mentor:availability:${session.sub}`, 60, 60 * 60);
+  await consume(`mentor:availability:${session.sub}`, 60, 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
   const availability = await setAvailability({ userId: session.sub, slots: body.slots });

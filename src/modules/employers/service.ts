@@ -38,6 +38,15 @@ import {
   ValidationError,
 } from "@/modules/shared/errors";
 import { recordAudit } from "@/modules/shared/audit";
+import {
+  approve,
+  archive,
+  close,
+  publishApprovedForOrganisation,
+  refuse,
+  restore,
+  revive,
+} from "@/modules/employers/lifecycle";
 import { notify } from "@/modules/notifications/service";
 
 const INVITE_TTL_DAYS = 7;
@@ -397,14 +406,23 @@ export async function updateJobPosting(input: {
 }) {
   const posting = await getOwnedPosting(input.jobId, input.userId);
 
-  if (posting.status === "ACTIVE") {
-    // Editing a live advert silently would let approved copy be swapped for
-    // something that was never reviewed. Edits send it back through moderation.
-    await db
-      .update(jobPostings)
-      .set({ status: "DRAFT", moderationStatus: "UNVERIFIED" })
-      .where(eq(jobPostings.id, posting.id));
-  }
+  /*
+   * ANY content edit sends the posting back through moderation.
+   *
+   * This used to fire only when the posting was currently ACTIVE, which left a
+   * route straight past the review that this module exists to enforce: close the
+   * posting (or wait for it to expire), edit the description to a recruitment-fee
+   * scam, then revive it. `revive` goes CLOSED/EXPIRED → ACTIVE without review,
+   * because the posting had been approved once — so the fraudulent copy went
+   * live having never been read by anybody. An adversarial pass found it.
+   *
+   * There is no state in which editing the words and keeping the approval is
+   * correct, so the condition is gone rather than widened.
+   */
+  await db
+    .update(jobPostings)
+    .set({ status: "DRAFT", moderationStatus: "UNVERIFIED" })
+    .where(eq(jobPostings.id, posting.id));
 
   const [updated] = await db
     .update(jobPostings)
@@ -512,10 +530,10 @@ export async function submitForReview(jobId: string, userId: string) {
 
   const flags = screenPosting(posting, org?.website);
 
-  await db
-    .update(jobPostings)
-    .set({ moderationStatus: "PENDING", status: "DRAFT" })
-    .where(eq(jobPostings.id, posting.id));
+  // SUBMITTED, not "DRAFT with moderation pending". The old pair of values
+  // meant the queue and the employer's dashboard each had to reconstruct what
+  // state the posting was really in.
+  await db.update(jobPostings).set({ status: "SUBMITTED" }).where(eq(jobPostings.id, posting.id));
 
   await db.insert(jobModerationReviews).values({
     jobPostingId: posting.id,
@@ -536,159 +554,62 @@ export async function submitForReview(jobId: string, userId: string) {
   return { posting, flags };
 }
 
-/**
- * THE GATE.
- *
- * Both conditions, every time, on every path that could make a posting public.
- * Nothing else in this module sets `status: "ACTIVE"`.
+/*
+ * `assertPublishable` used to live here, carrying a docstring calling itself THE
+ * GATE — and was called from nowhere. The check it described now runs inside
+ * `lifecycle.publish()`, which is the single path that can make a posting
+ * public. A gate that is not in the doorway is a wall standing on its own.
  */
-export async function assertPublishable(jobId: string): Promise<{ ok: true }> {
-  const [posting] = await db.select().from(jobPostings).where(eq(jobPostings.id, jobId)).limit(1);
-  if (!posting) throw new NotFoundError("That posting doesn't exist.");
 
-  // Seeded and admin-managed postings don't route through employer moderation.
-  if (!posting.organisationId) return { ok: true };
-
-  const [org] = await db
-    .select()
-    .from(organisations)
-    .where(eq(organisations.id, posting.organisationId))
-    .limit(1);
-
-  if (!org || org.verificationStatus !== "VERIFIED") {
-    throw new AppError(
-      "This organisation isn't verified yet, so its postings can't go live. Verification checks that the employer exists and is who they say they are.",
-      422,
-      "organisation_unverified",
-    );
-  }
-
-  const [approval] = await db
-    .select()
-    .from(jobModerationReviews)
-    .where(
-      and(
-        eq(jobModerationReviews.jobPostingId, jobId),
-        eq(jobModerationReviews.decision, "approve"),
-      ),
-    )
-    .orderBy(desc(jobModerationReviews.createdAt))
-    .limit(1);
-
-  if (!approval) {
-    throw new AppError(
-      "This posting hasn't been through moderation yet.",
-      422,
-      "moderation_pending",
-    );
-  }
-
-  return { ok: true };
-}
-
+/**
+ * Moderation approved it.
+ *
+ * Delegates to the lifecycle module, which decides between going live and
+ * landing on APPROVED — the latter when the organisation is not verified yet, a
+ * state that previously had nowhere to exist.
+ */
 export async function approveJobPosting(input: {
   jobId: string;
   adminId: string;
   note?: string;
 }) {
-  const [posting] = await db
-    .select()
-    .from(jobPostings)
-    .where(eq(jobPostings.id, input.jobId))
-    .limit(1);
-  if (!posting) throw new NotFoundError("That posting doesn't exist.");
-
-  await db.insert(jobModerationReviews).values({
-    jobPostingId: input.jobId,
-    reviewerId: input.adminId,
-    decision: "approve",
-    reason: input.note ?? null,
-  });
-
-  // Recorded first, then checked: the organisation must still be verified at
-  // the moment of publication, not merely when the review was queued.
-  await assertPublishable(input.jobId);
-
-  await db
-    .update(jobPostings)
-    .set({ status: "ACTIVE", moderationStatus: "VERIFIED", postedAt: new Date() })
-    .where(eq(jobPostings.id, input.jobId));
-
-  await recordAudit({
-    actorType: "admin",
-    actorId: input.adminId,
-    action: "job.approved",
-    entityType: "job_posting",
-    entityId: input.jobId,
-  });
-
-  if (posting.createdById) {
-    await notify({
-      userId: posting.createdById,
-      type: "job.posting_approved",
-      title: "Your posting is live",
-      body: `"${posting.title}" passed moderation and is now visible to job-seekers.`,
-      href: `/jobs/${posting.slug}`,
-      dedupeKey: `job.approved:${posting.id}`,
-    });
-  }
+  return approve({ jobId: input.jobId, adminId: input.adminId, note: input.note ?? null });
 }
 
 export async function rejectJobPosting(input: {
   jobId: string;
   adminId: string;
   reason: string;
+  /** True to send it back for edits rather than refusing it outright. */
+  requestChanges?: boolean;
 }) {
-  const [posting] = await db
-    .select()
-    .from(jobPostings)
-    .where(eq(jobPostings.id, input.jobId))
-    .limit(1);
-  if (!posting) throw new NotFoundError("That posting doesn't exist.");
-
-  await db.insert(jobModerationReviews).values({
-    jobPostingId: input.jobId,
-    reviewerId: input.adminId,
-    decision: "reject",
+  return refuse({
+    jobId: input.jobId,
+    adminId: input.adminId,
     reason: input.reason,
+    outcome: input.requestChanges ? "DRAFT" : "REJECTED",
   });
-
-  await db
-    .update(jobPostings)
-    .set({ status: "DRAFT", moderationStatus: "REJECTED" })
-    .where(eq(jobPostings.id, input.jobId));
-
-  await recordAudit({
-    actorType: "admin",
-    actorId: input.adminId,
-    action: "job.rejected",
-    entityType: "job_posting",
-    entityId: input.jobId,
-    after: { reason: input.reason },
-  });
-
-  if (posting.createdById) {
-    await notify({
-      userId: posting.createdById,
-      type: "job.posting_approved",
-      title: "Your posting needs changes",
-      body: `"${posting.title}" wasn't approved: ${input.reason}`,
-      href: `/employers/dashboard/jobs/${posting.id}`,
-      dedupeKey: `job.rejected:${posting.id}:${Date.now()}`,
-    });
-  }
 }
 
 export async function closeJobPosting(jobId: string, userId: string) {
   const posting = await getOwnedPosting(jobId, userId);
-  await db.update(jobPostings).set({ status: "CLOSED" }).where(eq(jobPostings.id, posting.id));
-  await recordAudit({
-    actorType: "user",
-    actorId: userId,
-    action: "job.closed",
-    entityType: "job_posting",
-    entityId: posting.id,
-  });
+  return close({ jobId: posting.id, actorId: userId });
+}
+
+/** The employer runs an expired or closed posting again. */
+export async function reviveJobPosting(jobId: string, userId: string) {
+  const posting = await getOwnedPosting(jobId, userId);
+  return revive({ jobId: posting.id, actorId: userId });
+}
+
+export async function archiveJobPosting(jobId: string, userId: string) {
+  const posting = await getOwnedPosting(jobId, userId);
+  return archive({ jobId: posting.id, actorId: userId, actorType: "user" });
+}
+
+export async function restoreJobPosting(jobId: string, userId: string) {
+  const posting = await getOwnedPosting(jobId, userId);
+  return restore({ jobId: posting.id, actorId: userId });
 }
 
 export async function listOrganisationJobs(organisationId: string, userId: string) {
@@ -802,7 +723,8 @@ export async function listPendingModeration(limit = 50) {
     })
     .from(jobPostings)
     .innerJoin(organisations, eq(organisations.id, jobPostings.organisationId))
-    .where(eq(jobPostings.moderationStatus, "PENDING"))
+    // Reads the lifecycle column, not the superseded moderation_status pair.
+    .where(inArray(jobPostings.status, ["SUBMITTED", "UNDER_REVIEW"]))
     .orderBy(desc(jobPostings.createdAt))
     .limit(limit);
 
@@ -859,5 +781,22 @@ export async function setOrganisationVerification(input: {
     after: { status: input.status, note: input.note },
   });
 
-  return updated;
+  /*
+   * Verifying an organisation releases whatever was waiting on it.
+   *
+   * Postings that passed moderation while the organisation was unverified sit in
+   * APPROVED. Without this they would stay there after the thing blocking them
+   * was resolved, which is the exact failure the state was introduced to avoid.
+   * The scheduler runs the same sweep as a backstop; this is what makes it
+   * immediate.
+   */
+  let published = 0;
+  if (input.status === "VERIFIED") {
+    published = await publishApprovedForOrganisation({
+      organisationId: input.organisationId,
+      actorId: input.adminId,
+    });
+  }
+
+  return { ...updated, publishedOnVerification: published };
 }

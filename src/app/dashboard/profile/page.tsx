@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { countries, educationStages, regions, skills as skillsTable } from "@/db/schema";
+import { countries, educationStages, regions, skills as skillsTable, users } from "@/db/schema";
+import { AvatarUpload } from "@/components/avatar-upload";
 import { requirePage } from "@/modules/auth/session";
 import { getFullProfile } from "@/modules/users/service";
 import { INTEREST_OPTIONS } from "@/modules/recommendations/assessment";
@@ -24,7 +25,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   // otherwise a UAE user is asked to pick an Indian state.
   const countryIso = await getCountryIso();
 
-  const [regionRows, stageRows, skillRows] = await Promise.all([
+  const [regionRows, stageRows, skillRows, [account]] = await Promise.all([
     db
       .select({ name: regions.name })
       .from(regions)
@@ -36,6 +37,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
       .from(educationStages)
       .orderBy(asc(educationStages.sequence)),
     db.select({ name: skillsTable.name }).from(skillsTable).orderBy(asc(skillsTable.name)).limit(400),
+    db.select({ avatarHash: users.avatarHash }).from(users).where(eq(users.id, session.sub)).limit(1),
   ]);
 
   return (
@@ -49,6 +51,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           get better advice than aspirational ones.
         </p>
       </header>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          Profile picture
+        </h2>
+        <div className="mt-3">
+          <AvatarUpload
+            userId={session.sub}
+            name={session.name}
+            hash={account?.avatarHash ?? null}
+          />
+        </div>
+      </section>
 
       {welcome ? (
         <Callout tone="good" title="Account created">

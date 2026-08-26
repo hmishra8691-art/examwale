@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button, Callout } from "@/components/ui";
 
 async function send(url: string, body: unknown, method: "POST" | "PATCH" | "PUT" = "POST") {
@@ -29,50 +29,95 @@ function minutesToTime(minutes: number): string {
 /**
  * Booking form.
  *
- * The datetime input is constrained to the mentor's declared windows by
- * offering concrete slots rather than a free-form picker. A free picker
- * produces requests that the server correctly rejects, which reads to the
- * person as the site being broken.
+ * The slots arrive already generated, from the same server function the booking
+ * endpoint validates against. This component used to build them itself, walking
+ * the weekly pattern with `date.getDay()` and `start.setHours()` — the
+ * *visitor's* clock — while the API checked the result against the server's. A
+ * seeker in one zone and a mentor in another could therefore be shown a time
+ * the API would then refuse, which reads as the site being broken.
+ *
+ * Each slot carries a label in the mentor's zone and one in the viewer's, both
+ * naming the zone, because "10:00" between Kolkata and Dubai is the most
+ * expensive ambiguity this product could ship.
  */
 export function SessionRequestForm({
   mentorId,
-  availability,
-  sessionMinutes,
+  slots,
   signedIn,
+  holdMinutes,
 }: {
   mentorId: string;
-  availability: { weekday: number; startMinute: number; endMinute: number }[];
-  sessionMinutes: number;
+  slots: {
+    startUtc: string;
+    mentorLabel: string;
+    viewerLabel: string;
+    sameZone: boolean;
+    status: "AVAILABLE" | "PENDING" | "BOOKED";
+  }[];
   signedIn: boolean;
+  holdMinutes: number;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  // Build the next four weeks of concrete slots from the weekly pattern.
-  const slots: { value: string; label: string }[] = [];
-  const now = new Date();
-  for (let dayOffset = 1; dayOffset <= 28 && slots.length < 60; dayOffset += 1) {
-    const date = new Date(now);
-    date.setDate(now.getDate() + dayOffset);
-    const windows = availability.filter((slot) => slot.weekday === date.getDay());
+  /*
+   * The slot is reserved while the form is being filled in.
+   *
+   * Without this, two people can be typing into this form about the same Tuesday
+   * and the second one loses at the end — having written a topic and a question
+   * for a session they were never going to get. The hold is taken as soon as a
+   * time is chosen and given back if they change their mind.
+   */
+  const [hold, setHold] = useState<{ id: string; startUtc: string; expiresAt: number } | null>(null);
+  const [holdError, setHoldError] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
-    for (const window of windows) {
-      for (
-        let minute = window.startMinute;
-        minute + sessionMinutes <= window.endMinute;
-        minute += sessionMinutes
-      ) {
-        const start = new Date(date);
-        start.setHours(Math.floor(minute / 60), minute % 60, 0, 0);
-        if (start.getTime() <= Date.now()) continue;
-        slots.push({
-          value: start.toISOString(),
-          label: `${start.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })} · ${minutesToTime(minute)}`,
-        });
-      }
+  useEffect(() => {
+    if (!hold) {
+      setSecondsLeft(null);
+      return;
     }
+    const tick = () => setSecondsLeft(Math.max(0, Math.round((hold.expiresAt - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [hold]);
+
+  async function takeHold(startUtc: string) {
+    setHoldError(null);
+    // Give back the previous one rather than sitting on two slots.
+    if (hold && hold.startUtc !== startUtc) void release(hold.id);
+    try {
+      const response = await fetch(`/api/v1/mentors/${mentorId}/hold`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduledAt: startUtc }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Couldn't reserve that slot.");
+      setHold({
+        id: payload.data.holdId,
+        startUtc,
+        expiresAt: new Date(payload.data.expiresAt).getTime(),
+      });
+    } catch (caught) {
+      setHold(null);
+      setHoldError((caught as Error).message);
+      router.refresh();
+    }
+  }
+
+  async function release(holdId: string) {
+    await fetch(`/api/v1/mentors/${mentorId}/hold`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ holdId }),
+    }).catch(() => {
+      // The scheduler releases it anyway; this is only a courtesy to the next
+      // person, so a failure here is not worth telling anybody about.
+    });
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -86,6 +131,8 @@ export function SessionRequestForm({
         topic: String(form.get("topic") ?? "").trim(),
         question: String(form.get("question") ?? "").trim() || null,
         scheduledAt: String(form.get("scheduledAt") ?? ""),
+        // Converts this seeker's own reservation rather than competing with it.
+        fromHoldId: hold?.id ?? null,
       });
       setDone(true);
       router.refresh();
@@ -130,16 +177,51 @@ export function SessionRequestForm({
 
       <label className="block">
         <span className="text-sm font-medium">Pick a time</span>
-        <select name="scheduledAt" required className={`mt-1.5 ${inputClass}`}>
+        <select
+          name="scheduledAt"
+          required
+          defaultValue=""
+          onChange={(event) => {
+            if (event.target.value) void takeHold(event.target.value);
+          }}
+          className={`mt-1.5 ${inputClass}`}
+        >
+          <option value="" disabled>
+            Choose a time…
+          </option>
           {slots.map((slot) => (
-            <option key={slot.value} value={slot.value}>
-              {slot.label}
+            <option
+              key={slot.startUtc}
+              value={slot.startUtc}
+              // A slot somebody else is mid-way through booking is shown, and
+              // shown as unavailable. Silently omitting it looks like the
+              // mentor's hours changed while you were reading them.
+              disabled={slot.status === "PENDING" && slot.startUtc !== hold?.startUtc}
+            >
+              {slot.sameZone
+                ? slot.viewerLabel
+                : `${slot.viewerLabel} — ${slot.mentorLabel} for the mentor`}
+              {slot.status === "PENDING" && slot.startUtc !== hold?.startUtc
+                ? " (being booked)"
+                : ""}
             </option>
           ))}
         </select>
         <span className="mt-1 block text-xs text-faint">
-          {sessionMinutes} minutes. Times are IST.
+          {slots[0]?.sameZone
+            ? "Shown in your timezone."
+            : "Shown in your timezone first, then the mentor's — you are in different zones."}
         </span>
+        {holdError ? (
+          <span className="mt-1.5 block text-xs text-red-700 dark:text-red-300">{holdError}</span>
+        ) : null}
+        {hold && secondsLeft != null ? (
+          <span className="mt-1.5 block text-xs text-faint tabular-nums">
+            {secondsLeft > 0
+              ? `Held for you for another ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} — nobody else can take it while you finish.`
+              : `Your ${holdMinutes}-minute hold has run out. Pick a time again.`}
+          </span>
+        ) : null}
       </label>
 
       <label className="block">
@@ -377,17 +459,35 @@ export function CredentialForm() {
   );
 }
 
-/** Weekly availability editor. */
+/**
+ * Weekly availability editor.
+ *
+ * The timezone is part of the record, not an assumption. Every window used to be
+ * stored against a default of Asia/Kolkata with no way to change it, so a mentor
+ * anywhere else published hours that meant something other than what they typed.
+ * One selector at the top governs all windows, because a mentor keeping
+ * different windows in different zones is a complication nobody has asked for.
+ */
 export function AvailabilityEditor({
   initial,
+  initialTimezone,
 }: {
   initial: { weekday: number; startMinute: number; endMinute: number }[];
+  initialTimezone: string;
 }) {
   const router = useRouter();
   const [slots, setSlots] = useState(initial);
+  const [timezone, setTimezone] = useState(initialTimezone);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+
+  // Offered zones: everywhere the platform operates, plus whatever the mentor's
+  // own browser reports, so somebody living outside those markets is not stuck.
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zoneOptions = Array.from(
+    new Set([initialTimezone, browserZone, "Asia/Kolkata", "Asia/Dubai", "UTC"].filter(Boolean)),
+  );
 
   function addSlot() {
     setSlots([...slots, { weekday: 6, startMinute: 10 * 60, endMinute: 13 * 60 }]);
@@ -403,7 +503,11 @@ export function AvailabilityEditor({
     setBusy(true);
     setError(null);
     try {
-      await send("/api/v1/mentors/me/availability", { slots }, "PUT");
+      await send(
+        "/api/v1/mentors/me/availability",
+        { slots: slots.map((slot) => ({ ...slot, timezone })) },
+        "PUT",
+      );
       setSaved(true);
       router.refresh();
     } catch (caught) {
@@ -417,6 +521,30 @@ export function AvailabilityEditor({
     <div className="space-y-3">
       {error ? <Callout tone="danger">{error}</Callout> : null}
       {saved ? <Callout tone="good">Availability saved.</Callout> : null}
+
+      <label className="block">
+        <span className="text-sm font-medium">Your timezone</span>
+        <select
+          value={timezone}
+          onChange={(event) => {
+            setTimezone(event.target.value);
+            setSaved(false);
+          }}
+          className="mt-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-sm"
+        >
+          {zoneOptions.map((zone) => (
+            <option key={zone} value={zone}>
+              {zone.replace(/_/g, " ")}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-faint">
+          The hours below are read in this zone. Seekers see them converted to theirs.
+          {browserZone && browserZone !== timezone ? (
+            <> Your device says you are in {browserZone.replace(/_/g, " ")}.</>
+          ) : null}
+        </span>
+      </label>
 
       {slots.length ? (
         <ul className="space-y-2">

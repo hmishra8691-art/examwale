@@ -34,6 +34,7 @@ import {
   providers,
   sources,
 } from "@/db/schema";
+import { likePattern } from "@/modules/shared/params";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/modules/shared/errors";
 import { recordAudit } from "@/modules/shared/audit";
 import { notify } from "@/modules/notifications/service";
@@ -90,7 +91,7 @@ export async function listCourses(filters: CourseFilters = {}) {
   if (filters.freeOnly) conditions.push(eq(courses.isFree, true));
 
   if (filters.search?.trim()) {
-    const term = `%${filters.search.trim().toLowerCase()}%`;
+    const term = likePattern(filters.search);
     conditions.push(
       or(
         sql`lower(${courses.title}) LIKE ${term}`,
@@ -125,7 +126,7 @@ export async function listCourses(filters: CourseFilters = {}) {
   }
 
   if (filters.city) {
-    const city = `%${filters.city.toLowerCase()}%`;
+    const city = likePattern(filters.city);
     conditions.push(
       sql`EXISTS (
         SELECT 1 FROM ${courseBatches}
@@ -266,16 +267,39 @@ export async function getCourseById(id: string) {
   };
 }
 
+/**
+ * The provider columns a directory visitor may see.
+ *
+ * `contactEmail` and `organisationId` are not among them. Neither was rendered
+ * anywhere, so returning the whole row was shipping a coaching centre's contact
+ * address to every unauthenticated caller of `/api/v1/providers` for no reason
+ * at all — the kind of leak that exists purely because `select()` is shorter to
+ * type than a column list. Enquiries reach the provider through the enquiry
+ * flow, which is what that address is for.
+ */
+const PUBLIC_PROVIDER_COLUMNS = {
+  id: providers.id,
+  name: providers.name,
+  type: providers.type,
+  slug: providers.slug,
+  about: providers.about,
+  city: providers.city,
+  website: providers.website,
+  logoUrl: providers.logoUrl,
+  countryId: providers.countryId,
+  verificationStatus: providers.verificationStatus,
+} as const;
+
 export async function listProviders(options: { search?: string; limit?: number } = {}) {
   const conditions: SQL[] = [];
   if (options.search?.trim()) {
-    const term = `%${options.search.trim().toLowerCase()}%`;
+    const term = likePattern(options.search);
     conditions.push(sql`lower(${providers.name}) LIKE ${term}`);
   }
 
   return db
     .select({
-      provider: providers,
+      provider: PUBLIC_PROVIDER_COLUMNS,
       courseCount: sql<number>`(
         SELECT count(*)::int FROM ${courses}
         WHERE ${courses.providerId} = ${providers.id} AND ${courses.status} = 'PUBLISHED'
@@ -288,7 +312,11 @@ export async function listProviders(options: { search?: string; limit?: number }
 }
 
 export async function getProviderById(id: string) {
-  const [provider] = await db.select().from(providers).where(eq(providers.id, id)).limit(1);
+  const [provider] = await db
+    .select(PUBLIC_PROVIDER_COLUMNS)
+    .from(providers)
+    .where(eq(providers.id, id))
+    .limit(1);
   if (!provider) throw new NotFoundError("We couldn't find that provider.");
 
   const providerCourses = await db

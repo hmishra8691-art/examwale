@@ -37,6 +37,7 @@ export const NOTIFICATION_TYPES = {
   "job.application_update": { label: "Application status changed", defaults: ["IN_APP", "EMAIL"] },
   "job.posting_approved": { label: "Your job posting was reviewed", defaults: ["IN_APP", "EMAIL"] },
   "job.new_applicant": { label: "New applicant", defaults: ["IN_APP"] },
+  "job.expiring_soon": { label: "Your job posting is closing", defaults: ["IN_APP", "EMAIL"] },
   "exam.date_verified": { label: "Exam date verified", defaults: ["IN_APP", "EMAIL"] },
   "exam.deadline_soon": { label: "Application deadline approaching", defaults: ["IN_APP", "EMAIL"] },
   "mentor.session_requested": { label: "New mentorship request", defaults: ["IN_APP", "EMAIL"] },
@@ -48,6 +49,15 @@ export const NOTIFICATION_TYPES = {
   "cohort.invited": { label: "Invited to a cohort", defaults: ["IN_APP", "EMAIL"] },
   "roadmap.step_due": { label: "Roadmap step due", defaults: ["IN_APP"] },
   "admin.verification_due": { label: "Records need re-verification", defaults: ["IN_APP"] },
+  /*
+   * The message body is deliberately never in the notification. These go to
+   * email and push, and a private message is not something to copy into either —
+   * the notification says a message arrived and where to read it.
+   */
+  "messaging.new_message": { label: "New message", defaults: ["IN_APP", "EMAIL"] },
+  "service.requested": { label: "Service request", defaults: ["IN_APP", "EMAIL"] },
+  "service.reviewed": { label: "Your service was reviewed", defaults: ["IN_APP", "EMAIL"] },
+  "messaging.report_reviewed": { label: "Your report was reviewed", defaults: ["IN_APP", "EMAIL"] },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

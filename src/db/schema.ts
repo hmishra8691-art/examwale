@@ -24,6 +24,7 @@ import {
   index,
   doublePrecision,
 } from "drizzle-orm/pg-core";
+import { customType } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createId } from "@/db/id";
 
@@ -31,6 +32,13 @@ const id = () =>
   text("id")
     .primaryKey()
     .$defaultFn(() => createId());
+
+/** Raw bytes. Drizzle ships no bytea column type, so declare one. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -104,7 +112,62 @@ export const employmentTypeEnum = pgEnum("employment_type", [
 
 export const remoteTypeEnum = pgEnum("remote_type", ["ONSITE", "HYBRID", "REMOTE"]);
 
-export const jobStatusEnum = pgEnum("job_status", ["DRAFT", "ACTIVE", "CLOSED"]);
+/**
+ * The posting lifecycle, as one column.
+ *
+ * It used to be two: `status` (DRAFT / ACTIVE / CLOSED) and `moderation_status`
+ * (UNVERIFIED / PENDING / VERIFIED / REJECTED), which between them encoded a
+ * state machine nobody had written down. Submitting for review meant
+ * `status=DRAFT, moderation_status=PENDING`; the states the Phase 2 brief asks
+ * for existed as combinations but had no names, and nothing prevented the
+ * impossible ones — ACTIVE and REJECTED at once was two UPDATEs away.
+ *
+ * One column, named states, and every transition goes through a function in
+ * modules/employers/lifecycle.ts that says which moves are legal.
+ *
+ * ACTIVE keeps its name rather than becoming PUBLISHED. It already means
+ * "published and visible" in `liveJobCondition()` and in every query that reads
+ * it; renaming would churn the whole module for no gain a user could see.
+ */
+export const jobStatusEnum = pgEnum("job_status", [
+  /** Being written. Visible only to its own organisation. */
+  "DRAFT",
+  /** Sent for moderation, not yet picked up. */
+  "SUBMITTED",
+  /** A moderator has it open. Distinct from SUBMITTED so a queue can show what is actually being worked on. */
+  "UNDER_REVIEW",
+  /**
+   * Moderation passed but not yet public — normally because the organisation is
+   * not verified. Previously this state had nowhere to live: approving such a
+   * posting threw, and it stayed DRAFT with no record that it had passed.
+   */
+  "APPROVED",
+  /** Live and visible. The only status `liveJobCondition()` accepts. */
+  "ACTIVE",
+  /** Moderation refused it. The reason is in `job_moderation_reviews`. */
+  "REJECTED",
+  /** Ran past its deadline. Applications are kept; the posting is not shown. */
+  "EXPIRED",
+  /** The employer filled the role or withdrew it. */
+  "CLOSED",
+  /** A moderator took it down after publication. */
+  "SUSPENDED",
+  /** Put away deliberately. Recoverable, and its history is intact. */
+  "ARCHIVED",
+]);
+
+/**
+ * Why a publication period ended. Parallel to the statuses that end one, and
+ * separate from them because a posting's *current* status says nothing about how
+ * its third-from-last run finished.
+ */
+export const publicationEndReasonEnum = pgEnum("publication_end_reason", [
+  "EXPIRED",
+  "CLOSED",
+  "SUSPENDED",
+  "ARCHIVED",
+  "SUPERSEDED",
+]);
 
 export const applicationStatusEnum = pgEnum("application_status", [
   "SAVED",
@@ -122,11 +185,155 @@ export const orgVerificationStatusEnum = pgEnum("org_verification_status", [
   "REJECTED",
 ]);
 
+/**
+ * What a conversation is *about*.
+ *
+ * Every conversation is anchored to a real relationship, and this records which
+ * one. That is not bookkeeping: it is the permission model. See
+ * `modules/messaging/service.ts` for why an open inbox was not an option on a
+ * platform whose users include school students.
+ */
+/**
+ * What kind of professional service is on offer.
+ *
+ * A closed list rather than free text. A marketplace where every seller invents
+ * their own category is one nobody can browse — and the categories are also what
+ * a moderator judges an outcome claim against, which needs them to mean the same
+ * thing twice.
+ */
+export const serviceKindEnum = pgEnum("service_kind", [
+  "RESUME_REVIEW",
+  "INTERVIEW_COACHING",
+  "CAREER_COACHING",
+  "CONSULTING",
+  "TRAINING",
+  "PORTFOLIO_REVIEW",
+  "OTHER",
+]);
+
+/** How the work is delivered. Affects nothing technically; matters to a buyer. */
+export const serviceDeliveryEnum = pgEnum("service_delivery", [
+  /** A live call at a booked time. */
+  "LIVE_SESSION",
+  /** They send something, you send it back. */
+  "ASYNC_REVIEW",
+  /** A written report or plan. */
+  "WRITTEN_DELIVERABLE",
+  /** Several sessions over a period. */
+  "PROGRAMME",
+]);
+
+/**
+ * The service lifecycle.
+ *
+ * The same shape as `job_status`, deliberately: a listing somebody writes, sends
+ * for review, and can have taken down is the same problem twice, and giving it
+ * two different vocabularies would mean two sets of states to reason about with
+ * no gain. Fewer states than jobs, because a service has no publication window
+ * to expire — it runs until its provider stops offering it.
+ */
+export const serviceStatusEnum = pgEnum("service_status", [
+  "DRAFT",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "ACTIVE",
+  "REJECTED",
+  "PAUSED",
+  "SUSPENDED",
+  "ARCHIVED",
+]);
+
+export const serviceRequestStatusEnum = pgEnum("service_request_status", [
+  "REQUESTED",
+  "ACCEPTED",
+  "DECLINED",
+  "COMPLETED",
+  "CANCELLED",
+]);
+
+export const conversationContextEnum = pgEnum("conversation_context", [
+  /** A booked or requested mentorship session. */
+  "MENTORSHIP",
+  /** An application somebody sent to a posting the other party owns. */
+  "JOB_APPLICATION",
+  /** An enquiry about a course the other party provides. */
+  "COURSE_ENQUIRY",
+  /** A request against a listed professional service. */
+  "SERVICE_REQUEST",
+  /** Opened by a moderator or admin. Always permitted. */
+  "SUPPORT",
+]);
+
+export const reportStatusEnum = pgEnum("report_status", [
+  "OPEN",
+  "UPHELD",
+  "DISMISSED",
+]);
+
+export const reportSubjectEnum = pgEnum("report_subject", ["MESSAGE", "USER"]);
+
+export const scheduledRunStatusEnum = pgEnum("scheduled_run_status", [
+  "RUNNING",
+  "SUCCEEDED",
+  "FAILED",
+  /** Claimed by another tick, or not yet due. Recorded so a gap is explicable. */
+  "SKIPPED",
+]);
+
+/**
+ * The *platform authority* axis, and only that.
+ *
+ * Deliberately not where provider-ness lives. The Phase 2 brief asked for
+ * MENTOR, EMPLOYER and COURSE_PROVIDER as roles here, and that would have been
+ * the wrong shape: a mentor is also a seeker, and somebody who mentors on
+ * Saturdays and posts jobs for their employer on Tuesdays holds two provider
+ * capabilities at once. A single-valued enum cannot express either, so it would
+ * have forced exactly the false choice — one account per thing you do — that the
+ * brief is trying to remove.
+ *
+ * Provider capabilities are therefore a separate, multi-valued relation
+ * (`provider_capabilities`). This enum answers "what may this account do to the
+ * platform", which genuinely is one value per person.
+ *
+ * MODERATOR is new: the brief asks for it, and until now a moderator had to be a
+ * full admin, which meant the only way to let somebody review job postings was
+ * to also let them edit country coverage and read the audit log.
+ */
 export const userRoleEnum = pgEnum("user_role", [
   "SEEKER",
   "ORG_MEMBER",
+  "MODERATOR",
   "ADMIN",
   "SUPER_ADMIN",
+]);
+
+/** What a provider offers. One row per capability, so they compose. */
+export const providerCapabilityKindEnum = pgEnum("provider_capability_kind", [
+  "MENTOR",
+  "EMPLOYER",
+  "COURSE_PROVIDER",
+  "SERVICE_PROVIDER",
+]);
+
+export const providerCapabilityStatusEnum = pgEnum("provider_capability_status", [
+  "PENDING",
+  "ACTIVE",
+  "SUSPENDED",
+  "REJECTED",
+]);
+
+/**
+ * How much of a provider profile the public sees.
+ *
+ * LIMITED exists because the two obvious states are not enough: a mentor who
+ * has stopped taking bookings still wants the people they have already met to
+ * find them, and a consultant between contracts wants a profile that does not
+ * appear in a directory but works as a link they can send.
+ */
+export const providerVisibilityEnum = pgEnum("provider_visibility", [
+  "PUBLIC",
+  "LIMITED",
+  "HIDDEN",
 ]);
 
 export const subscriptionPlanEnum = pgEnum("subscription_plan", [
@@ -781,6 +988,14 @@ export const jobPostings = pgTable(
      */
     organisationId: text("organisation_id"),
     createdById: text("created_by_id"),
+    /**
+     * SUPERSEDED by `status`, which now carries the whole lifecycle.
+     *
+     * Kept for one release under the expand–migrate–contract rule used in Stage
+     * 3: nothing reads it for lifecycle decisions any more, so it cannot drift,
+     * and dropping it is a one-line change once the migration has been correct
+     * in production for a while.
+     */
     moderationStatus: orgVerificationStatusEnum("moderation_status").notNull().default("UNVERIFIED"),
     /** Employers pay to feature a posting; featured rows are labelled in the UI. */
     isFeatured: boolean("is_featured").notNull().default(false),
@@ -913,6 +1128,21 @@ export const users = pgTable(
     emailVerified: boolean("email_verified").notNull().default(false),
     role: userRoleEnum("role").notNull().default("SEEKER"),
     plan: subscriptionPlanEnum("plan").notNull().default("FREE"),
+    /**
+     * Content hash of the current profile picture, or null for none.
+     *
+     * On `users` rather than on `user_profiles` or `provider_profiles` because a
+     * person has one face: the same picture belongs in a mentor listing, beside
+     * a job application and in a message thread, and a row on `user_profiles`
+     * would not exist for accounts that never filled one in. It is also the one
+     * presentation field read on nearly every list, so keeping it off a join is
+     * worth the slight oddity of a display column on the auth table.
+     *
+     * The hash doubles as a cache key: a new picture produces a new URL, so the
+     * old one can be cached indefinitely without ever going stale.
+     */
+    avatarHash: text("avatar_hash"),
+    avatarUpdatedAt: timestamp("avatar_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   },
@@ -949,6 +1179,14 @@ export const userProfiles = pgTable("user_profiles", {
   regionId: text("region_id"),
   city: text("city"),
   preferredLanguage: text("preferred_language").notNull().default("en"),
+  /**
+   * IANA zone, for everybody — not only providers.
+   *
+   * Until now a viewer's timezone was inferred from their profile country, which
+   * is right for two markets and wrong for anyone working from a third. Session
+   * times, reminders and slot pickers all read this first.
+   */
+  timezone: text("timezone"),
 
   educationStageId: text("education_stage_id"),
   degree: text("degree"),
@@ -1027,6 +1265,328 @@ export const savedItems = pgTable(
 // ---------------------------------------------------------------------------
 // Documents
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Services marketplace
+// ---------------------------------------------------------------------------
+
+/**
+ * One professional service somebody offers.
+ *
+ * The generic surface the Phase 2 brief asked for: résumé reviews, interview
+ * coaching, consulting — anything that is not a job, a course or a mentoring
+ * session, all three of which are modelled concretely elsewhere and stay that
+ * way. Those three earned their own tables by having real structure (a salary
+ * band, a batch, a bookable slot). This is for everything that does not.
+ *
+ * Owned by a `provider_profiles` row rather than by a user, so a service belongs
+ * to the same professional identity as everything else that person offers.
+ */
+export const services = pgTable(
+  "services",
+  {
+    id: id(),
+    providerProfileId: text("provider_profile_id").notNull(),
+    kind: serviceKindEnum("kind").notNull(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    /** What the buyer actually gets. */
+    summary: text("summary").notNull(),
+    description: text("description").notNull(),
+    /** Concrete deliverables, so "coaching" means something. */
+    deliverables: jsonb("deliverables").$type<string[]>(),
+    delivery: serviceDeliveryEnum("delivery").notNull().default("LIVE_SESSION"),
+    /**
+     * Zero means free, which is different from unpriced.
+     *
+     * `priceOnRequest` is the honest third state: some consulting genuinely is
+     * quoted per engagement, and forcing a number would produce a fictional one.
+     */
+    price: integer("price"),
+    priceOnRequest: boolean("price_on_request").notNull().default(false),
+    currencyCode: varchar("currency_code", { length: 3 }).notNull().default("INR"),
+    /** Indicative, for the buyer's diary rather than for scheduling. */
+    durationMinutes: integer("duration_minutes"),
+    turnaroundDays: integer("turnaround_days"),
+    countryId: text("country_id"),
+    languages: jsonb("languages").$type<string[]>(),
+    status: serviceStatusEnum("status").notNull().default("DRAFT"),
+    /** Stops new requests without unlisting or losing the page. */
+    acceptingRequests: boolean("accepting_requests").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("service_browse_idx").on(t.status, t.kind, t.countryId),
+    index("service_provider_idx").on(t.providerProfileId, t.status),
+  ],
+);
+
+/** Moderation trail for a service, mirroring `job_moderation_reviews`. */
+export const serviceModerationReviews = pgTable(
+  "service_moderation_reviews",
+  {
+    id: id(),
+    serviceId: text("service_id").notNull(),
+    reviewerId: text("reviewer_id"),
+    decision: text("decision").notNull(),
+    reason: text("reason"),
+    automatedFlags: jsonb("automated_flags").$type<string[]>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("service_moderation_idx").on(t.serviceId, t.createdAt)],
+);
+
+/**
+ * Somebody asking for a service.
+ *
+ * Deliberately a *request* rather than a purchase. No money moves through this
+ * platform yet, and a "Buy" button that takes no payment and creates no
+ * obligation would misrepresent what actually happens — which is that two people
+ * start talking. Opening a request opens a conversation, and that conversation is
+ * where the arrangement gets made.
+ */
+export const serviceRequests = pgTable(
+  "service_requests",
+  {
+    id: id(),
+    serviceId: text("service_id").notNull(),
+    requesterId: text("requester_id").notNull(),
+    /** What they want, in their words. */
+    message: text("message"),
+    status: serviceRequestStatusEnum("status").notNull().default("REQUESTED"),
+    providerNote: text("provider_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("service_request_service_idx").on(t.serviceId, t.status),
+    index("service_request_user_idx").on(t.requesterId, t.status),
+    // One open request per person per service: a second click is impatience,
+    // not a second job, and a provider's queue full of duplicates is how a real
+    // request gets missed.
+    uniqueIndex("service_request_open_uq")
+      .on(t.serviceId, t.requesterId)
+      .where(sql`${t.status} IN ('REQUESTED', 'ACCEPTED')`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Messaging
+// ---------------------------------------------------------------------------
+
+/**
+ * A conversation between two people about one thing.
+ *
+ * `contextType` and `contextId` are load-bearing rather than decorative: a
+ * conversation exists because a mentorship session, a job application or a
+ * course enquiry connects these two people, and that anchor is what
+ * `assertCanMessage` re-checks on every send.
+ *
+ * The unique index is on the *pair plus the context*, so the same two people can
+ * hold separate threads about two different applications without those threads
+ * merging into one confusing history.
+ */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: id(),
+    contextType: conversationContextEnum("context_type").notNull(),
+    /** The session, application or enquiry this is about. */
+    contextId: text("context_id"),
+    /** One line naming the thing, so a list is readable without extra joins. */
+    subject: text("subject").notNull(),
+    /** Denormalised for ordering an inbox without touching the messages table. */
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set when a moderator freezes a thread. Reading still works; sending does not. */
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedReason: text("locked_reason"),
+  },
+  (t) => [index("conversation_recent_idx").on(t.lastMessageAt)],
+);
+
+/**
+ * Who is in a conversation, and what they have read.
+ *
+ * `lastReadAt` per participant is what makes an unread count possible without a
+ * per-message read table — for one-to-one threads a high-water mark is exactly
+ * as expressive and vastly cheaper.
+ */
+export const conversationParticipants = pgTable(
+  "conversation_participants",
+  {
+    conversationId: text("conversation_id").notNull(),
+    userId: text("user_id").notNull(),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    /** Stops notifications without leaving the thread. */
+    mutedAt: timestamp("muted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.conversationId, t.userId] }),
+    index("participant_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * One message.
+ *
+ * Deletion is a tombstone, never a row removal. A message somebody reported has
+ * to still exist for a moderator to judge, and "delete for everyone" that
+ * destroys the evidence of harassment protects the wrong person. The body is
+ * cleared on delete so it stops being readable; the row and its metadata stay.
+ */
+export const messages = pgTable(
+  "messages",
+  {
+    id: id(),
+    conversationId: text("conversation_id").notNull(),
+    senderId: text("sender_id").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    /** Kept for moderation after a delete; never returned to a participant. */
+    originalBody: text("original_body"),
+  },
+  (t) => [
+    index("dm_conversation_idx").on(t.conversationId, t.createdAt),
+    index("dm_sender_idx").on(t.senderId),
+  ],
+);
+
+/**
+ * One person refusing contact with another.
+ *
+ * Directional and asymmetric in intent but symmetric in effect: if A blocks B,
+ * neither can send to the other. A one-way block would let the blocker keep
+ * messaging somebody who cannot reply, which is a harassment tool rather than a
+ * safety feature.
+ */
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    blockerId: text("blocker_id").notNull(),
+    blockedId: text("blocked_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.blockerId, t.blockedId] }),
+    index("block_blocked_idx").on(t.blockedId),
+  ],
+);
+
+/**
+ * A report of a message or a person, for a moderator.
+ *
+ * Deliberately not auto-actioned. An automated response to a report is a tool
+ * for whoever files the most reports, and on a platform where mentors are
+ * strangers to the students booking them, a wrongly-suspended mentor and an
+ * un-actioned harasser are both real costs. A person decides.
+ */
+export const abuseReports = pgTable(
+  "abuse_reports",
+  {
+    id: id(),
+    reporterId: text("reporter_id").notNull(),
+    subjectType: reportSubjectEnum("subject_type").notNull(),
+    /** A message id or a user id, depending on `subjectType`. */
+    subjectId: text("subject_id").notNull(),
+    /** The conversation it happened in, when there is one. */
+    conversationId: text("conversation_id"),
+    reason: text("reason").notNull(),
+    detail: text("detail"),
+    status: reportStatusEnum("status").notNull().default("OPEN"),
+    reviewedById: text("reviewed_by_id"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewNote: text("review_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("report_status_idx").on(t.status, t.createdAt),
+    // One open report per person per subject: a second click is the same
+    // complaint, not new information, and a queue full of duplicates is how
+    // real reports get missed.
+    uniqueIndex("report_open_uq")
+      .on(t.reporterId, t.subjectType, t.subjectId)
+      .where(sql`${t.status} = 'OPEN'`),
+  ],
+);
+
+/**
+ * Scheduled-task run history (modules/scheduler/).
+ *
+ * Append-only, and the reason it exists is observability rather than
+ * correctness: a scheduler nobody can see is how a platform ends up having
+ * silently stopped sending reminders three months ago. Every tick records what
+ * it ran, how long it took, how many rows it touched and what went wrong, so
+ * "did the job expiry sweep run last night?" is a query rather than a guess.
+ *
+ * It is also what makes the cadence work. Rather than trusting the host's cron
+ * to fire on a precise schedule — Vercel's Hobby plan allows one daily entry,
+ * and a manual trigger can arrive at any moment — a task is due when its last
+ * successful run is older than its declared interval. The history is the clock.
+ *
+ * The partial unique index is the overlap guard: at most one RUNNING row per
+ * task, enforced by Postgres, so two ticks arriving together cannot both run
+ * the same sweep and send everything twice.
+ */
+export const scheduledTaskRuns = pgTable(
+  "scheduled_task_runs",
+  {
+    id: id(),
+    task: text("task").notNull(),
+    status: scheduledRunStatusEnum("status").notNull().default("RUNNING"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    /** Rows the task acted on. Zero is a normal, successful outcome. */
+    processed: integer("processed").notNull().default(0),
+    /** One line of what happened, or the error if it failed. */
+    detail: text("detail"),
+    /** Who or what started it: 'cron', or an admin user id. */
+    trigger: text("trigger").notNull().default("cron"),
+  },
+  (t) => [
+    index("scheduled_run_task_idx").on(t.task, t.startedAt),
+    uniqueIndex("scheduled_run_one_active_uq")
+      .on(t.task)
+      .where(sql`${t.status} = 'RUNNING'`),
+  ],
+);
+
+/**
+ * Shared rate-limit counters (modules/shared/rate-limit.ts).
+ *
+ * Here rather than in a cache because the app already requires Postgres and does
+ * not require Redis, and a limit that only holds within one serverless instance
+ * is not a limit. Rows are reset in place when their window expires; the
+ * scheduled purge only stops the table growing forever.
+ */
+export const rateLimitBuckets = pgTable("rate_limit_buckets", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
+/**
+ * Bytes for the `postgres` storage driver (modules/documents/storage.ts).
+ *
+ * Kept in its own table rather than as a column on `user_documents` so the
+ * metadata a listing needs — filename, type, size, verification state — can be
+ * read without dragging a multi-megabyte payload through the query, and so the
+ * same driver can hold objects that are not user documents (profile pictures
+ * next).
+ *
+ * `bytes` is bytea. Drizzle has no built-in for it, hence the customType.
+ */
+export const storageObjects = pgTable("storage_objects", {
+  key: text("key").primaryKey(),
+  contentType: text("content_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  bytes: bytea("bytes").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const userDocuments = pgTable(
   "user_documents",
@@ -1448,12 +2008,33 @@ export const mentorStatusEnum = pgEnum("mentor_status", [
 ]);
 
 export const mentorshipStatusEnum = pgEnum("mentorship_status", [
+  /**
+   * A short-lived reservation, taken the moment somebody picks a slot and
+   * released if they do not finish.
+   *
+   * It lives in this table rather than in a separate holds table on purpose. The
+   * unique index on (mentor_id, scheduled_at) is what actually settles two
+   * people wanting the same slot; a second table would mean two places
+   * competing for one instant and application code deciding who won, which is
+   * the race this design exists to avoid.
+   */
+  "HELD",
   "REQUESTED",
   "ACCEPTED",
   "DECLINED",
   "COMPLETED",
   "CANCELLED",
   "NO_SHOW",
+  /** Moved to a different time. The row is kept so the history is legible. */
+  "RESCHEDULED",
+]);
+
+/** Whether an exception adds availability or removes it. */
+export const availabilityExceptionKindEnum = pgEnum("availability_exception_kind", [
+  /** A holiday, or a single afternoon off. Wins over the weekly pattern. */
+  "UNAVAILABLE",
+  /** A one-off window outside the usual hours. */
+  "EXTRA",
 ]);
 
 export const billingIntervalEnum = pgEnum("billing_interval", ["MONTHLY", "YEARLY"]);
@@ -1548,6 +2129,48 @@ export const organisationInvites = pgTable(
  * it is how a jobs board becomes a fee-fraud channel — so the gate is a row
  * here, not a convention.
  */
+/**
+ * Every run a posting has had on the board.
+ *
+ * The Phase 2 brief's requirement is that expiry must not destroy anything, and
+ * that a revived posting keeps its applications and its past. One row per
+ * publication period does that: reviving does not overwrite the previous run, it
+ * opens a second one. `sequence` numbers them, so "this role has been posted
+ * four times in eight months" is a query rather than an inference — which is
+ * worth knowing about a role, both for a seeker looking at it and for a platform
+ * deciding what to believe about the employer.
+ *
+ * `applications` are untouched by any of this: they reference the posting, not
+ * the period, and a candidate's application is theirs regardless of how many
+ * times the employer has relisted.
+ */
+export const jobPublicationPeriods = pgTable(
+  "job_publication_periods",
+  {
+    id: id(),
+    jobPostingId: text("job_posting_id").notNull(),
+    /** 1 for the first run, 2 after the first revival, and so on. */
+    sequence: integer("sequence").notNull().default(1),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The deadline this run was given. */
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    /** Null while the run is current. */
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endedReason: publicationEndReasonEnum("ended_reason"),
+    /** Who revived it, when this is not the first run. */
+    revivedById: text("revived_by_id"),
+  },
+  (t) => [
+    uniqueIndex("job_period_sequence_uq").on(t.jobPostingId, t.sequence),
+    // At most one open period per posting, enforced by Postgres rather than by
+    // remembering to close the old one first.
+    uniqueIndex("job_period_one_open_uq")
+      .on(t.jobPostingId)
+      .where(sql`${t.endedAt} IS NULL`),
+    index("job_period_expiry_idx").on(t.endedAt, t.expiresAt),
+  ],
+);
+
 export const jobModerationReviews = pgTable(
   "job_moderation_reviews",
   {
@@ -1668,25 +2291,141 @@ export const courseEnquiries = pgTable(
 // Phase 2 · Mentors
 // ---------------------------------------------------------------------------
 
+/**
+ * A provider's professional identity, shared across everything they offer.
+ *
+ * One row per person who offers anything. It exists because the same
+ * professional facts — headline, bio, languages, timezone, links — were needed
+ * by three unrelated tables and lived in only one of them: `mentors` carried a
+ * headline and a bio, `providers` (coaching centres) carried an `about`, and an
+ * employer had no personal identity at all, only an organisation. Somebody who
+ * mentors and also posts jobs had to be two records with no relationship.
+ *
+ * The split with the capability-specific tables is: this holds facts about the
+ * *person*, while `mentors` holds facts about the *mentoring offer* (rate,
+ * session length, expertise, credential verification) and `organisations` holds
+ * facts about the employer. Nothing about a session rate belongs here, and
+ * nothing about a bio belongs there.
+ */
+export const providerProfiles = pgTable(
+  "provider_profiles",
+  {
+    id: id(),
+    userId: text("user_id").notNull(),
+    /** Professional name, which is not always the account name. */
+    displayName: text("display_name").notNull(),
+    headline: text("headline").notNull(),
+    bio: text("bio").notNull(),
+    professionalTitle: text("professional_title"),
+    currentRole: text("current_role"),
+    currentOrganisation: text("current_organisation"),
+    yearsExperience: integer("years_experience").notNull().default(0),
+    languages: jsonb("languages").notNull().$type<string[]>(),
+    city: text("city"),
+    countryId: text("country_id"),
+    /**
+     * IANA zone. The authoritative answer to "what time is it for this person",
+     * which until now was inferred from their country — fine for two markets and
+     * wrong the moment somebody works from somewhere else.
+     */
+    timezone: text("timezone"),
+    /** Professional links, labelled. Validated on write, never rendered raw. */
+    links: jsonb("links").$type<{ label: string; url: string }[]>(),
+    /**
+     * Self-declared, and shown as self-declared. Verified credentials are a
+     * different thing and live in `mentor_credentials`, where a person checked
+     * them — conflating the two would let anyone claim a verified badge.
+     */
+    certifications: jsonb("certifications").$type<{ title: string; issuer?: string; year?: number }[]>(),
+    visibility: providerVisibilityEnum("visibility").notNull().default("PUBLIC"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("provider_profile_user_uq").on(t.userId),
+    index("provider_profile_visibility_idx").on(t.visibility, t.countryId),
+  ],
+);
+
+/**
+ * What one provider offers, one row per thing.
+ *
+ * This is the table that makes "sign up once, tick what you do" possible, and
+ * the reason provider-ness is not a value on `users.role`. Each capability
+ * carries its own status, because they are approved separately and for different
+ * reasons: mentoring needs a verified credential, employing needs a verified
+ * organisation, and neither implies the other.
+ */
+export const providerCapabilities = pgTable(
+  "provider_capabilities",
+  {
+    id: id(),
+    providerProfileId: text("provider_profile_id").notNull(),
+    kind: providerCapabilityKindEnum("kind").notNull(),
+    status: providerCapabilityStatusEnum("status").notNull().default("PENDING"),
+    /** Shown to the provider when a capability is refused or suspended. */
+    reviewNote: text("review_note"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedById: text("approved_by_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("provider_capability_uq").on(t.providerProfileId, t.kind),
+    index("provider_capability_status_idx").on(t.kind, t.status),
+  ],
+);
+
+/**
+ * The mentoring *offer*, not the mentor.
+ *
+ * The person is in `provider_profiles`; this row is what they are selling. The
+ * seven columns below marked SUPERSEDED are the professional-identity fields
+ * that moved there. They are kept, nullable and unread, for one release: this
+ * runs against a live database, and the safe order for that is expand (add the
+ * new home), migrate (backfill and switch every read), then contract (drop) once
+ * the backfill has been correct in production for a while. Nothing writes to
+ * them any more, so they cannot drift — they are frozen copies, and dropping
+ * them later is a one-line schema change.
+ */
 export const mentors = pgTable(
   "mentors",
   {
     id: id(),
     userId: text("user_id").notNull(),
-    headline: text("headline").notNull(),
-    bio: text("bio").notNull(),
     countryId: text("country_id").notNull(),
-    city: text("city"),
-    languages: jsonb("languages").notNull().$type<string[]>(),
     expertiseCareerSlugs: jsonb("expertise_career_slugs").$type<string[]>(),
     expertiseExamIds: jsonb("expertise_exam_ids").$type<string[]>(),
-    yearsExperience: integer("years_experience").notNull().default(0),
-    currentRole: text("current_role"),
-    currentOrganisation: text("current_organisation"),
+
+    /** SUPERSEDED by provider_profiles.headline. */
+    legacyHeadline: text("headline"),
+    /** SUPERSEDED by provider_profiles.bio. */
+    legacyBio: text("bio"),
+    /** SUPERSEDED by provider_profiles.city. */
+    legacyCity: text("city"),
+    /** SUPERSEDED by provider_profiles.languages. */
+    legacyLanguages: jsonb("languages").$type<string[]>(),
+    /** SUPERSEDED by provider_profiles.yearsExperience. */
+    legacyYearsExperience: integer("years_experience"),
+    /** SUPERSEDED by provider_profiles.currentRole. */
+    legacyCurrentRole: text("current_role"),
+    /** SUPERSEDED by provider_profiles.currentOrganisation. */
+    legacyCurrentOrganisation: text("current_organisation"),
     /** Zero means the mentor offers free sessions — not "price unknown". */
     sessionRate: integer("session_rate").notNull().default(0),
     currencyCode: varchar("currency_code", { length: 3 }).notNull().default("INR"),
     sessionMinutes: integer("session_minutes").notNull().default(30),
+    /**
+     * Gap left after each session before the next can start.
+     *
+     * Zero means back-to-back, which is a legitimate choice and the previous
+     * behaviour. It is separate from session length because a mentor who wants
+     * ten minutes to write notes should not have to advertise forty-minute
+     * sessions to get it.
+     */
+    bufferMinutes: integer("buffer_minutes").notNull().default(0),
+    /** Zero means no limit. */
+    maxPerDay: integer("max_per_day").notNull().default(0),
+    maxPerWeek: integer("max_per_week").notNull().default(0),
     status: mentorStatusEnum("status").notNull().default("PENDING"),
     /**
      * A mentor may not be listed until at least one credential is verified.
@@ -1722,6 +2461,39 @@ export const mentorCredentials = pgTable(
   (t) => [index("mentor_credential_mentor_idx").on(t.mentorId, t.status)],
 );
 
+/**
+ * Departures from the weekly pattern.
+ *
+ * The weekly rules in `mentor_availability` say what a mentor normally does; this
+ * says what is different about one particular date. Both kinds are needed and
+ * they are not symmetrical: UNAVAILABLE always wins, because "I am away that
+ * Tuesday" must beat "I am usually free on Tuesdays" no matter which order the
+ * rows were written in, while EXTRA adds a window that the weekly pattern does
+ * not contain.
+ *
+ * Dates are stored as a plain `date` in the mentor's own zone rather than as an
+ * instant. "I am away on the 14th" is a claim about a calendar day where the
+ * mentor is, and turning it into a UTC range would make it start and end at
+ * odd times for them.
+ */
+export const mentorAvailabilityExceptions = pgTable(
+  "mentor_availability_exceptions",
+  {
+    id: id(),
+    mentorId: text("mentor_id").notNull(),
+    kind: availabilityExceptionKindEnum("kind").notNull(),
+    /** YYYY-MM-DD in the mentor's timezone. */
+    onDate: text("on_date").notNull(),
+    /** Null on both means the whole day. */
+    startMinute: integer("start_minute"),
+    endMinute: integer("end_minute"),
+    /** Shown to nobody but the mentor — a reminder of why they blocked it. */
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("availability_exception_idx").on(t.mentorId, t.onDate)],
+);
+
 export const mentorAvailability = pgTable(
   "mentor_availability",
   {
@@ -1749,13 +2521,40 @@ export const mentorshipSessions = pgTable(
     meetingUrl: text("meeting_url"),
     mentorNote: text("mentor_note"),
     cancelledReason: text("cancelled_reason"),
+    /**
+     * When a HELD row stops reserving its slot.
+     *
+     * Read at query time as well as swept by the scheduler, for the same reason
+     * job expiry is: a hold whose expiry has passed must stop blocking the slot
+     * immediately, not whenever a background task next runs.
+     */
+    holdExpiresAt: timestamp("hold_expires_at", { withTimezone: true }),
+    /** The session this one replaced, when it came from a reschedule. */
+    rescheduledFromId: text("rescheduled_from_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("mentorship_mentor_idx").on(t.mentorId, t.status),
     index("mentorship_seeker_idx").on(t.seekerId, t.status),
-    uniqueIndex("mentorship_slot_uq").on(t.mentorId, t.scheduledAt),
+    /*
+     * One live booking per mentor per instant — and *live* is the operative
+     * word.
+     *
+     * This index used to be unconditional, which meant any row at that instant
+     * reserved it forever. Cancel a session and the mentor could never offer
+     * that time again; decline a request and the slot died with it; reschedule
+     * away from a time and it stayed blocked by the row recording that you had
+     * left. Nothing surfaced it because the failure looked like a double-booking
+     * conflict, which is exactly what the index is supposed to produce.
+     *
+     * Partial, so only the statuses that genuinely hold a slot participate.
+     * HELD is in the list because a reservation must exclude other people; that
+     * is its entire purpose.
+     */
+    uniqueIndex("mentorship_slot_uq")
+      .on(t.mentorId, t.scheduledAt)
+      .where(sql`${t.status} IN ('HELD', 'REQUESTED', 'ACCEPTED')`),
   ],
 );
 

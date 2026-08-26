@@ -72,7 +72,16 @@ export async function startCheckout(input: {
   const [priorPayment] = await db
     .select()
     .from(payments)
-    .where(eq(payments.idempotencyKey, input.idempotencyKey))
+    // Scoped to the caller. The column's unique index is global, so an
+    // unscoped lookup returned somebody else's payment id and status to
+    // whoever guessed or collided with their key — and made their checkout
+    // silently "replay" into nothing.
+    .where(
+      and(
+        eq(payments.idempotencyKey, input.idempotencyKey),
+        eq(payments.userId, input.userId),
+      ),
+    )
     .limit(1);
   if (priorPayment) {
     return {

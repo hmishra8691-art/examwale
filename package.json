@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "db:push": "tsx src/db/push.ts",
     "db:seed": "tsx src/db/seed/index.ts",
-    "db:reset": "tsx src/db/push.ts --reset && tsx src/db/seed/index.ts"
+    "db:reset": "tsx src/db/push.ts --reset && tsx src/db/seed/index.ts",
+    "test:unit": "node scripts/unit/timezone.test.mjs && node scripts/unit/images.test.mjs",
+    "db:backfill": "tsx src/db/backfill/provider-profiles.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -23,6 +25,7 @@
     "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

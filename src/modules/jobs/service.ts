@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   companies,
@@ -8,6 +8,7 @@ import {
   occupations,
   regions,
 } from "@/db/schema";
+import { likePattern } from "@/modules/shared/params";
 import { NotFoundError } from "@/modules/shared/errors";
 import { getCountryIso } from "@/modules/geo/service";
 
@@ -26,12 +27,41 @@ export type JobFilters = {
   sort?: "recent" | "salary";
 };
 
+/**
+ * What makes a posting live, as one composable condition.
+ *
+ * Two things, and both were being missed. `status = 'ACTIVE'` was applied by
+ * each query that remembered to — `getJobBySlug` did not, so any DRAFT or
+ * CLOSED posting was readable by anyone who had its slug. And `expires_at` was
+ * written on create and then read by nothing at all, so a posting past its
+ * deadline stayed listed, searchable and applicable indefinitely.
+ *
+ * A null `expires_at` means no deadline, which is different from an elapsed one:
+ * seeded and admin-entered postings have no expiry, and treating null as
+ * "expired" would empty the board.
+ *
+ * Written as a condition rather than a filter each caller applies for the same
+ * reason `listableCondition()` exists in the mentors module: a rule that has to
+ * be remembered in five places is a rule that will be missed in one.
+ */
+export function liveJobCondition(now: Date = new Date()): SQL {
+  return and(
+    eq(jobPostings.status, "ACTIVE"),
+    or(isNull(jobPostings.expiresAt), gt(jobPostings.expiresAt, now)),
+  )!;
+}
+
+/** The same rule against a row already in hand. */
+export function isLiveJob(job: { status: string; expiresAt: Date | null }): boolean {
+  return job.status === "ACTIVE" && (job.expiresAt === null || job.expiresAt > new Date());
+}
+
 export async function listJobs(filters: JobFilters = {}) {
   const page = Math.max(1, filters.page ?? 1);
   const perPage = Math.min(50, Math.max(6, filters.perPage ?? 20));
   const countryIso = filters.country ?? (await getCountryIso());
 
-  const conditions: SQL[] = [eq(jobPostings.status, "ACTIVE"), eq(countries.isoCode, countryIso)];
+  const conditions: SQL[] = [liveJobCondition(), eq(countries.isoCode, countryIso)];
 
   if (filters.region) conditions.push(eq(regions.name, filters.region));
   if (filters.employmentType?.length) {
@@ -56,7 +86,7 @@ export async function listJobs(filters: JobFilters = {}) {
   }
   if (filters.occupation) conditions.push(eq(occupations.slug, filters.occupation));
   if (filters.search?.trim()) {
-    const term = `%${filters.search.trim().toLowerCase()}%`;
+    const term = likePattern(filters.search);
     conditions.push(
       or(
         sql`lower(${jobPostings.title}) LIKE ${term}`,
@@ -116,7 +146,17 @@ export async function listJobs(filters: JobFilters = {}) {
   return { items: rows, total, page, perPage, totalPages: Math.max(1, Math.ceil(total / perPage)) };
 }
 
-export async function getJobBySlug(slug: string) {
+/**
+ * One posting, by slug.
+ *
+ * `viewer.canSeeUnpublished` lets the posting employer and admins open their own
+ * drafts and expired postings from the dashboard. Everyone else gets the live
+ * rule, which this function previously did not apply at all.
+ */
+export async function getJobBySlug(
+  slug: string,
+  viewer?: { canSeeUnpublished?: boolean },
+) {
   const [row] = await db
     .select({
       job: jobPostings,
@@ -132,6 +172,9 @@ export async function getJobBySlug(slug: string) {
     .limit(1);
 
   if (!row) throw new NotFoundError("That job posting isn't available.");
+  if (!viewer?.canSeeUnpublished && !isLiveJob(row.job)) {
+    throw new NotFoundError("That job posting isn't available.");
+  }
   return row;
 }
 
@@ -142,7 +185,7 @@ export async function listJobRegions(country?: string) {
     .from(jobPostings)
     .innerJoin(regions, eq(jobPostings.regionId, regions.id))
     .innerJoin(countries, eq(regions.countryId, countries.id))
-    .where(and(eq(jobPostings.status, "ACTIVE"), eq(countries.isoCode, countryIso)))
+    .where(and(liveJobCondition(), eq(countries.isoCode, countryIso)))
     .groupBy(regions.name)
     .orderBy(desc(sql`count(${jobPostings.id})`))
     .limit(20);
@@ -299,7 +342,7 @@ export async function recommendedJobs(input: {
     .from(jobPostings)
     .innerJoin(companies, eq(jobPostings.companyId, companies.id))
     .leftJoin(regions, eq(jobPostings.regionId, regions.id))
-    .where(eq(jobPostings.status, "ACTIVE"))
+    .where(liveJobCondition())
     .orderBy(desc(jobPostings.postedAt))
     .limit(60);
 

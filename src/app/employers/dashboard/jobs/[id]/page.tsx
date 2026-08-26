@@ -6,7 +6,9 @@ import { db } from "@/db/client";
 import { jobModerationReviews } from "@/db/schema";
 import { requirePage } from "@/modules/auth/session";
 import { getOwnedPosting, listApplicants } from "@/modules/employers/service";
+import { STATUS_META, publicationHistory, type JobStatus } from "@/modules/employers/lifecycle";
 import { formatMoneyRange } from "@/modules/shared/format";
+import { MessageLink } from "@/components/message-link";
 import {
   ApplicantStatusControl,
   FLAG_LABELS,
@@ -29,7 +31,7 @@ export default async function EmployerJobDetailPage({ params }: Props) {
     notFound();
   }
 
-  const [applicants, reviews] = await Promise.all([
+  const [applicants, reviews, periods] = await Promise.all([
     listApplicants(id, session.sub),
     db
       .select()
@@ -37,9 +39,17 @@ export default async function EmployerJobDetailPage({ params }: Props) {
       .where(eq(jobModerationReviews.jobPostingId, id))
       .orderBy(desc(jobModerationReviews.createdAt))
       .limit(10),
+    publicationHistory(id),
   ]);
 
-  const latestRejection = reviews.find((review) => review.decision === "reject");
+  // A refusal or a suspension — both are things the employer needs the reason
+  // for, and both were previously only surfaced for "reject".
+  const latestRejection = reviews.find(
+    (review) =>
+      review.decision === "reject" ||
+      review.decision === "suspend" ||
+      review.decision === "request_changes",
+  );
   const flags = reviews.find((review) => review.automatedFlags?.length)?.automatedFlags ?? [];
 
   return (
@@ -54,12 +64,17 @@ export default async function EmployerJobDetailPage({ params }: Props) {
             {posting.title}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge tone={posting.status === "ACTIVE" ? "good" : "neutral"}>{posting.status}</Badge>
+            <Badge tone={STATUS_META[posting.status as JobStatus].tone}>
+              {STATUS_META[posting.status as JobStatus].label}
+            </Badge>
             <span className="text-sm text-muted">
               {posting.city ?? "No location"} ·{" "}
               {posting.employmentType.toLowerCase().replace("_", " ")}
             </span>
           </div>
+          <p className="mt-2 max-w-prose text-[13.5px] leading-relaxed text-muted">
+            {STATUS_META[posting.status as JobStatus].blurb}
+          </p>
         </div>
         {posting.status === "ACTIVE" ? (
           <ButtonLink href={`/jobs/${posting.slug}`} variant="secondary" size="sm">
@@ -135,6 +150,34 @@ export default async function EmployerJobDetailPage({ params }: Props) {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Actions</h2>
             <div className="mt-3">
               <PostingActions jobId={posting.id} status={posting.status} />
+
+        {periods.length ? (
+          <div className="mt-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+              Times posted
+            </h2>
+            <ol className="mt-2 space-y-1.5 text-[13.5px]">
+              {periods.map((period) => (
+                <li key={period.id} className="flex flex-wrap justify-between gap-2">
+                  <span className="text-muted">
+                    Run {period.sequence}
+                    {period.revivedById ? " (relisted)" : ""}
+                  </span>
+                  <span className="tabular-nums">
+                    {new Date(period.publishedAt).toDateString()} —{" "}
+                    {period.endedAt
+                      ? `${new Date(period.endedAt).toDateString()} (${period.endedReason?.toLowerCase()})`
+                      : "now"}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-2 text-xs leading-relaxed text-faint">
+              Kept in full. Applications from every run stay attached to the posting, so relisting
+              never loses anybody who applied.
+            </p>
+          </div>
+        ) : null}
             </div>
             <div className="mt-4">
               <ButtonLink
@@ -181,6 +224,12 @@ export default async function EmployerJobDetailPage({ params }: Props) {
                     <ApplicantStatusControl
                       applicationId={row.application.id}
                       status={row.application.status}
+                    />
+                    <MessageLink
+                      withUserId={row.applicantId}
+                      contextType="JOB_APPLICATION"
+                      contextId={row.application.id}
+                      label="Message applicant"
                     />
                   </div>
                 </div>

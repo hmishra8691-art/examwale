@@ -11,8 +11,8 @@ export const POST = route(async (request: Request) => {
   // Per-email is the limit that actually matters here — it stops repeated
   // attempts against one address. The IP limit is the burst guard, and it
   // loosens to a global ceiling when no trusted proxy makes the IP knowable.
-  consume(`signup:email:${body.email.toLowerCase()}`, 5, 15 * 60);
-  consumeByClient("signup", ip, { perIp: 5, globalFallback: 300 }, 15 * 60);
+  await consume(`signup:email:${body.email.toLowerCase()}`, 5, 15 * 60);
+  await consumeByClient("signup", ip, { perIp: 5, globalFallback: 300 }, 15 * 60);
 
   const session = await signUp({
     ...body,

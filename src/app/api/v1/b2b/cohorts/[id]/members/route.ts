@@ -20,7 +20,7 @@ export const GET = route(async (_request: Request, context: Context) => {
 
 export const POST = route(async (request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`cohort:invite:${session.sub}`, 40, 24 * 60 * 60);
+  await consume(`cohort:invite:${session.sub}`, 40, 24 * 60 * 60);
 
   const { id } = await context.params;
   const body = inviteSchema.parse(await readJson(request));

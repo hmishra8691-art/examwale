@@ -27,6 +27,7 @@ const NAV = [
 
 const MORE = [
   { href: "/mentors", label: "Mentors", blurb: "Talk to someone who has done it" },
+  { href: "/services", label: "Services", blurb: "Résumé reviews, coaching, consulting" },
   { href: "/business", label: "Business ideas", blurb: "Costs, licences, break-even" },
   { href: "/pathways", label: "After school", blurb: "Streams and routes after Class 10 and 12" },
   { href: "/assessment", label: "Career assessment", blurb: "Ranked shortlist from your answers" },
@@ -47,11 +48,21 @@ export function SiteHeader({
   unreadCount = 0,
   countryIso = "IN",
   countries = [],
+  isProvider = false,
+  unreadMessages = 0,
 }: {
   session: SessionUser | null;
   locale?: Locale;
   unreadCount?: number;
   countryIso?: string;
+  /**
+   * Shown only to people who actually offer something. A "Provider" link in
+   * everybody's header is an advert; for somebody who mentors it is the way in
+   * to their own work.
+   */
+  isProvider?: boolean;
+  /** Unread messages, shown on the inbox link. */
+  unreadMessages?: number;
   /** Active countries only. The switcher hides itself below two. */
   countries?: SwitchableCountry[];
 }) {
@@ -226,6 +237,25 @@ export function SiteHeader({
                 ) : null}
               </Link>
               <Link
+                href="/messages"
+                className="relative hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-[var(--text)] sm:block"
+              >
+                Messages
+                {unreadMessages > 0 ? (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold text-white">
+                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                  </span>
+                ) : null}
+              </Link>
+              {isProvider ? (
+                <Link
+                  href="/provider"
+                  className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-[var(--text)] lg:block"
+                >
+                  Provider
+                </Link>
+              ) : null}
+              <Link
                 href="/dashboard"
                 className="hidden whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-[var(--text)] sm:block"
               >
@@ -335,6 +365,17 @@ export function SiteHeader({
               </div>
               {session ? (
                 <>
+                  <Link href="/messages" className="block rounded-lg px-3 py-2.5 text-sm font-medium">
+                    Messages{unreadMessages ? ` (${unreadMessages})` : ""}
+                  </Link>
+                  {isProvider ? (
+                    <Link
+                      href="/provider"
+                      className="block rounded-lg px-3 py-2.5 text-sm font-medium"
+                    >
+                      Provider
+                    </Link>
+                  ) : null}
                   <Link href="/dashboard" className="block rounded-lg px-3 py-2.5 text-sm font-medium">
                     Dashboard
                   </Link>

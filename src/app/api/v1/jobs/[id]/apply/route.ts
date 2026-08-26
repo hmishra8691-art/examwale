@@ -6,7 +6,7 @@ import { created, ok, readJson, route } from "@/modules/shared/http";
 import { requireSession } from "@/modules/auth/session";
 import { consume } from "@/modules/shared/rate-limit";
 import { NotFoundError } from "@/modules/shared/errors";
-import { applyToJob, matchJob } from "@/modules/jobs/service";
+import { applyToJob, isLiveJob, matchJob } from "@/modules/jobs/service";
 import { latestResume } from "@/modules/documents/service";
 import { recordAudit } from "@/modules/shared/audit";
 
@@ -18,13 +18,16 @@ type Context = { params: Promise<{ id: string }> };
 
 export const POST = route(async (request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`apply:${session.sub}`, 30, 60 * 60);
+  await consume(`apply:${session.sub}`, 30, 60 * 60);
 
   const { id } = await context.params;
   const body = bodySchema.parse(await readJson(request));
 
   const job = await db.query.jobPostings.findFirst({ where: eq(jobPostings.id, id) });
-  if (!job || job.status !== "ACTIVE") {
+  // Status *and* expiry. The status check was here; the expiry check was not, so
+  // a posting past its deadline kept accepting applications that no employer was
+  // still reading.
+  if (!job || !isLiveJob(job)) {
     throw new NotFoundError("That job isn't accepting applications.");
   }
 

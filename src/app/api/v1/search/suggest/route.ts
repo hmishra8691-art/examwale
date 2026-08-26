@@ -29,7 +29,7 @@ export const GET = route(async (request: Request) => {
   const query = q.trim();
   if (query.length < 2) return ok({ hits: [], query });
 
-  consumeByClient("suggest", clientIp(request), { perIp: 240, globalFallback: 20_000 }, 60 * 5);
+  await consumeByClient("suggest", clientIp(request), { perIp: 240, globalFallback: 20_000 }, 60 * 5);
 
   const { hits } = await universalSearch({ query, limit });
 

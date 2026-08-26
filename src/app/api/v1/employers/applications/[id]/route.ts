@@ -12,7 +12,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export const PATCH = route(async (request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`application:status:${session.sub}`, 300, 60 * 60);
+  await consume(`application:status:${session.sub}`, 300, 60 * 60);
 
   const { id } = await context.params;
   const body = bodySchema.parse(await readJson(request));

@@ -7,7 +7,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export const POST = route(async (_request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`job:submit:${session.sub}`, 40, 24 * 60 * 60);
+  await consume(`job:submit:${session.sub}`, 40, 24 * 60 * 60);
 
   const { id } = await context.params;
   const { posting, flags } = await submitForReview(id, session.sub);

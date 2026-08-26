@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { getJobBySlug, matchJob } from "@/modules/jobs/service";
-import { getSession } from "@/modules/auth/session";
+import { getSession, isAdmin } from "@/modules/auth/session";
 import { db } from "@/db/client";
 import { skills as skillsTable, userProfiles, userSkills } from "@/db/schema";
 import { Badge, ButtonLink, Callout, Card, SectionHeading } from "@/components/ui";
@@ -28,16 +28,19 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function JobDetailPage({ params }: { params: Params }) {
   const { slug } = await params;
+  const session = await getSession();
 
   let detail: Awaited<ReturnType<typeof getJobBySlug>>;
   try {
-    detail = await getJobBySlug(slug);
+    // Admins can open a draft or expired posting because moderating one means
+    // reading it. For everyone else this now 404s, where before any posting was
+    // readable by slug regardless of its status or deadline.
+    detail = await getJobBySlug(slug, { canSeeUnpublished: isAdmin(session) });
   } catch {
     notFound();
   }
 
   const { job, company, region, occupation } = detail;
-  const session = await getSession();
 
   let match: ReturnType<typeof matchJob> | null = null;
   if (session) {

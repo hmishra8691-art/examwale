@@ -16,7 +16,7 @@ export const GET = route(async () => {
 
 export const PATCH = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`billing:subscription:${session.sub}`, 20, 60 * 60);
+  await consume(`billing:subscription:${session.sub}`, 20, 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
 

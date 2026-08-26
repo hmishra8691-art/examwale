@@ -21,7 +21,7 @@ export const GET = route(async (request: Request) => {
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`cohort:create:${session.sub}`, 20, 24 * 60 * 60);
+  await consume(`cohort:create:${session.sub}`, 20, 24 * 60 * 60);
 
   const body = createSchema.parse(await readJson(request));
   const result = await createCohort({ userId: session.sub, ...body });

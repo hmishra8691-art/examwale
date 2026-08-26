@@ -347,9 +347,18 @@ export async function listCohortMembers(cohortId: string, userId: string) {
     })
     .from(cohortMembers)
     .leftJoin(users, eq(users.id, cohortMembers.userId))
-    .where(inArray(cohortMembers.status, ["INVITED", "ACTIVE"]))
+    // The cohort predicate belongs in the query. Filtering in JS afterwards
+    // gave the right answer while loading every INVITED or ACTIVE member on the
+    // platform, joined to their name and email — a latency cliff, and one
+    // refactor away from returning all of it.
+    .where(
+      and(
+        eq(cohortMembers.cohortId, cohortId),
+        inArray(cohortMembers.status, ["INVITED", "ACTIVE"]),
+      ),
+    )
     .orderBy(asc(cohortMembers.createdAt))
-    .then((rows) => rows.filter((row) => row.member.cohortId === cohortId));
+;
 }
 
 // ---------------------------------------------------------------------------

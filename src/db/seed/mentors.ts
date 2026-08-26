@@ -14,6 +14,8 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
+  providerCapabilities,
+  providerProfiles,
   mentorAvailability,
   mentorCredentials,
   mentorReviews,
@@ -293,22 +295,53 @@ export async function seedMentors(
           .returning({ id: users.id })
       )[0].id;
 
+    /*
+     * Two rows now: the person, then the offer. A mentor's professional identity
+     * lives in `provider_profiles` and is shared with anything else they go on to
+     * offer, so seeding one means seeding both.
+     */
+    await db
+      .insert(providerProfiles)
+      .values({
+        userId,
+        displayName: seed.name,
+        headline: seed.headline,
+        bio: seed.bio,
+        currentRole: seed.currentRole,
+        currentOrganisation: seed.currentOrganisation,
+        yearsExperience: seed.yearsExperience,
+        languages: seed.languages,
+        city: seed.city,
+        countryId,
+        timezone: "Asia/Kolkata",
+      })
+      .onConflictDoNothing({ target: providerProfiles.userId });
+
+    const [profile] = await db
+      .select({ id: providerProfiles.id })
+      .from(providerProfiles)
+      .where(eq(providerProfiles.userId, userId))
+      .limit(1);
+
+    await db
+      .insert(providerCapabilities)
+      .values({
+        providerProfileId: profile.id,
+        kind: "MENTOR",
+        status: seed.approved ? "ACTIVE" : "PENDING",
+        approvedAt: seed.approved ? daysAgo(20) : null,
+      })
+      .onConflictDoNothing();
+
     const [mentor] = await db
       .insert(mentors)
       .values({
         userId,
-        headline: seed.headline,
-        bio: seed.bio,
         countryId,
-        city: seed.city,
-        languages: seed.languages,
         expertiseCareerSlugs: seed.careerSlugs?.length ? seed.careerSlugs : null,
         expertiseExamIds: seed.examSlugs?.length
           ? seed.examSlugs.map((slug) => examIdBySlug.get(slug)).filter((id): id is string => Boolean(id))
           : null,
-        yearsExperience: seed.yearsExperience,
-        currentRole: seed.currentRole,
-        currentOrganisation: seed.currentOrganisation,
         sessionRate: seed.sessionRate,
         sessionMinutes: seed.sessionMinutes,
         status: seed.approved ? "ACTIVE" : "PENDING",

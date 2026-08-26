@@ -1,11 +1,13 @@
 import { SignJWT, jwtVerify } from "jose";
 import { createHash, randomBytes } from "node:crypto";
 import { env } from "@/modules/shared/env";
+import type { UserRole } from "@/db/schema";
 
 export type AccessClaims = {
   sub: string;
   email: string;
-  role: "SEEKER" | "ORG_MEMBER" | "ADMIN" | "SUPER_ADMIN";
+  /** Taken from the schema enum, so a new role cannot diverge from the token. */
+  role: UserRole;
   plan: "FREE" | "PREMIUM" | "B2B";
   name?: string | null;
 };

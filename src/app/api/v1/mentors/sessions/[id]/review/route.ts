@@ -13,7 +13,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export const POST = route(async (request: Request, context: Context) => {
   const session = await requireSession();
-  consume(`mentor:review:${session.sub}`, 30, 24 * 60 * 60);
+  await consume(`mentor:review:${session.sub}`, 30, 24 * 60 * 60);
 
   const { id } = await context.params;
   const body = bodySchema.parse(await readJson(request));

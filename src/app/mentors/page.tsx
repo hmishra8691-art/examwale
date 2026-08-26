@@ -4,6 +4,7 @@ import { listMentors } from "@/modules/mentors/service";
 import { flag, int, one } from "@/modules/shared/params";
 import { getMessages } from "@/modules/i18n/service";
 import { formatMoney } from "@/modules/shared/format";
+import { Avatar } from "@/components/avatar";
 import { Badge, ButtonLink, Callout, Card, EmptyState, Pill, SectionHeading } from "@/components/ui";
 import { CoverageNotice } from "@/components/coverage-notice";
 
@@ -110,7 +111,8 @@ export default async function MentorsPage({ searchParams }: Props) {
           {result.mentors.map((row) => (
             <Card as="li" key={row.mentor.id} className="relative flex flex-col">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
+                <Avatar userId={row.userId} name={row.name} hash={row.avatarHash} size="md" />
+                <div className="min-w-0 flex-1">
                   <h3 className="font-medium">
                     <Link href={`/mentors/${row.mentor.id}`} className="hover:text-brand-600">
                       <span className="absolute inset-0" aria-hidden />

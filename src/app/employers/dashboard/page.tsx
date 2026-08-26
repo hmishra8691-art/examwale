@@ -3,22 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requirePage } from "@/modules/auth/session";
 import { getPrimaryOrganisation, listOrganisationJobs } from "@/modules/employers/service";
+import { STATUS_META, type JobStatus } from "@/modules/employers/lifecycle";
 import { Badge, ButtonLink, Callout, Card, EmptyState, SectionHeading, Stat } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Hiring dashboard" };
 
-const STATUS_TONE = {
-  ACTIVE: "good",
-  DRAFT: "neutral",
-  CLOSED: "warn",
-} as const;
-
-const MODERATION_LABEL: Record<string, { label: string; tone: "neutral" | "warn" | "good" | "bad" }> = {
-  UNVERIFIED: { label: "Not submitted", tone: "neutral" },
-  PENDING: { label: "In review", tone: "warn" },
-  VERIFIED: { label: "Approved", tone: "good" },
-  REJECTED: { label: "Changes needed", tone: "bad" },
-};
 
 export default async function EmployerDashboardPage() {
   const session = await requirePage("/employers/dashboard");
@@ -87,7 +76,6 @@ export default async function EmployerDashboardPage() {
         {jobs.length ? (
           <ul className="mt-5 grid gap-4">
             {jobs.map(({ posting, applicantCount }) => {
-              const moderation = MODERATION_LABEL[posting.moderationStatus] ?? MODERATION_LABEL.UNVERIFIED;
               return (
                 <Card as="li" key={posting.id} className="relative">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -107,15 +95,25 @@ export default async function EmployerDashboardPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={STATUS_TONE[posting.status]}>{posting.status}</Badge>
-                      <Badge tone={moderation.tone}>{moderation.label}</Badge>
+                      <Badge tone={STATUS_META[posting.status as JobStatus].tone}>
+                        {STATUS_META[posting.status as JobStatus].label}
+                      </Badge>
                     </div>
                   </div>
+                  <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+                    {STATUS_META[posting.status as JobStatus].blurb}
+                  </p>
                   <p className="mt-3 text-sm">
                     <span className="font-medium tabular-nums">{applicantCount}</span>{" "}
                     <span className="text-muted">
                       {applicantCount === 1 ? "applicant" : "applicants"}
                     </span>
+                    {posting.status === "ACTIVE" && posting.expiresAt ? (
+                      <span className="text-muted">
+                        {" "}
+                        · runs until {new Date(posting.expiresAt).toDateString()}
+                      </span>
+                    ) : null}
                   </p>
                 </Card>
               );

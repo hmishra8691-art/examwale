@@ -3,17 +3,24 @@ import { created, readJson, route } from "@/modules/shared/http";
 import { requireSession } from "@/modules/auth/session";
 import { consume } from "@/modules/shared/rate-limit";
 import { addCredential } from "@/modules/mentors/service";
+import { isRenderableUrl } from "@/modules/shared/params";
 
 const bodySchema = z.object({
   kind: z.enum(["exam_result", "employment", "education", "licence", "other"]),
   title: z.string().trim().min(3).max(200),
   issuer: z.string().trim().max(160).nullish(),
-  evidenceUrl: z.string().url().max(500).nullish(),
+  evidenceUrl: z
+    .string()
+    .url()
+    .max(500)
+    // Scheme as well as shape: z.url() accepts javascript: and data:.
+    .refine(isRenderableUrl, "Links must start with http:// or https://")
+    .nullish(),
 });
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`mentor:credential:${session.sub}`, 20, 24 * 60 * 60);
+  await consume(`mentor:credential:${session.sub}`, 20, 24 * 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
   const credential = await addCredential({ userId: session.sub, ...body });

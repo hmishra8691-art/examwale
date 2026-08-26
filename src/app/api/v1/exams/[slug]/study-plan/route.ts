@@ -24,8 +24,8 @@ type Context = { params: Promise<{ slug: string }> };
 
 export const POST = route(async (request: Request, context: Context) => {
   const session = await getSession();
-  if (session) consume(`study-plan:user:${session.sub}`, 30, 60 * 60);
-  else consumeByClient("study-plan", clientIp(request), { perIp: 30, globalFallback: 2000 }, 60 * 60);
+  if (session) await consume(`study-plan:user:${session.sub}`, 30, 60 * 60);
+  else await consumeByClient("study-plan", clientIp(request), { perIp: 30, globalFallback: 2000 }, 60 * 60);
 
   const { slug } = await context.params;
   const body = bodySchema.parse(await readJson(request));

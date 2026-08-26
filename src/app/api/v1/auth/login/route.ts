@@ -11,8 +11,8 @@ export const POST = route(async (request: Request) => {
   // Per-account first: this is the limit that stops credential stuffing against
   // one user. The IP limit catches broad spraying, and falls back to a loose
   // global ceiling when the IP isn't trustworthy.
-  consume(`login:acct:${body.email.toLowerCase()}`, 10, 15 * 60);
-  consumeByClient("login", ip, { perIp: 20, globalFallback: 600 }, 15 * 60);
+  await consume(`login:acct:${body.email.toLowerCase()}`, 10, 15 * 60);
+  await consumeByClient("login", ip, { perIp: 20, globalFallback: 600 }, 15 * 60);
 
   const session = await signIn({
     ...body,

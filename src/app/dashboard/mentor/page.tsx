@@ -7,11 +7,14 @@ import { mentorAvailability } from "@/db/schema";
 import { requirePage } from "@/modules/auth/session";
 import {
   getMentorForUser,
+  listAvailabilityExceptions,
   listCredentials,
   listSessionsForMentor,
 } from "@/modules/mentors/service";
 import { formatDate } from "@/modules/shared/format";
+import { MessageLink } from "@/components/message-link";
 import { AvailabilityEditor, CredentialForm, SessionActions } from "@/components/mentor-forms";
+import { AvailabilityExceptions, BookingRulesForm } from "@/components/availability-exceptions";
 import { Badge, Callout, Card, EmptyState, SectionHeading, Stat } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Mentor dashboard" };
@@ -21,7 +24,7 @@ export default async function MentorDashboardPage() {
   const mentor = await getMentorForUser(session.sub);
   if (!mentor) redirect("/mentors/apply");
 
-  const [credentials, sessions, availability] = await Promise.all([
+  const [credentials, sessions, availability, exceptions] = await Promise.all([
     listCredentials(mentor.id),
     listSessionsForMentor(session.sub),
     db
@@ -29,7 +32,10 @@ export default async function MentorDashboardPage() {
       .from(mentorAvailability)
       .where(eq(mentorAvailability.mentorId, mentor.id))
       .orderBy(mentorAvailability.weekday, mentorAvailability.startMinute),
+    listAvailabilityExceptions(mentor.id),
   ]);
+
+  const mentorZone = availability[0]?.timezone ?? "Asia/Kolkata";
 
   const pending = sessions.filter((row) => row.session.status === "REQUESTED");
   const upcoming = sessions.filter(
@@ -115,7 +121,7 @@ export default async function MentorDashboardPage() {
       <section className="mt-10">
         <SectionHeading
           title="Your hours"
-          description="People can only book inside these windows. Times are IST."
+          description="People can only book inside these windows, read in the timezone you set below."
         />
         <div className="mt-4">
           <AvailabilityEditor
@@ -124,7 +130,45 @@ export default async function MentorDashboardPage() {
               startMinute: slot.startMinute,
               endMinute: slot.endMinute,
             }))}
+            initialTimezone={mentorZone}
           />
+        </div>
+
+        <div className="mt-8">
+          <SectionHeading
+            title="Session length and limits"
+            description="How long each session runs, how much room you leave afterwards, and how many you are willing to take."
+          />
+          <div className="mt-4">
+            <BookingRulesForm
+              initial={{
+                sessionMinutes: mentor.sessionMinutes,
+                bufferMinutes: mentor.bufferMinutes,
+                maxPerDay: mentor.maxPerDay,
+                maxPerWeek: mentor.maxPerWeek,
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <SectionHeading
+            title="Days that are different"
+            description="Holidays, an afternoon off, or a one-off window outside your usual hours."
+          />
+          <div className="mt-4">
+            <AvailabilityExceptions
+              initial={exceptions.map((row) => ({
+                id: row.id,
+                kind: row.kind as "UNAVAILABLE" | "EXTRA",
+                onDate: row.onDate,
+                startMinute: row.startMinute,
+                endMinute: row.endMinute,
+                note: row.note,
+              }))}
+              timezone={mentorZone}
+            />
+          </div>
         </div>
       </section>
 
@@ -158,6 +202,12 @@ export default async function MentorDashboardPage() {
                 ) : null}
 
                 <div className="mt-3">
+                  <MessageLink
+                    withUserId={row.session.seekerId}
+                    contextType="MENTORSHIP"
+                    contextId={row.session.id}
+                    label="Message"
+                  />
                   <SessionActions
                     sessionId={row.session.id}
                     status={row.session.status}

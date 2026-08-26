@@ -17,7 +17,7 @@ const bodySchema = z.object({
 
 export const POST = route(async (request: Request) => {
   const session = await requireSession();
-  consume(`billing:checkout:${session.sub}`, 10, 60 * 60);
+  await consume(`billing:checkout:${session.sub}`, 10, 60 * 60);
 
   const body = bodySchema.parse(await readJson(request));
 

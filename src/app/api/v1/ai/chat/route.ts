@@ -34,7 +34,7 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   try {
     const session = await requireSession();
-    consume(`ai-chat:${session.sub}`, 30, 60);
+    await consume(`ai-chat:${session.sub}`, 30, 60);
 
     const body = bodySchema.parse(await readJson(request));
     await assertWithinQuota(session.sub, session.plan);

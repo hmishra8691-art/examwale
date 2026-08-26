@@ -32,8 +32,8 @@ const bodySchema = z.object({
  */
 export const POST = route(async (request: Request) => {
   const session = await getSession();
-  if (session) consume(`recommend:${session.sub}`, 25, 60 * 60);
-  else consumeByClient("recommend", clientIp(request), { perIp: 20, globalFallback: 2000 }, 60 * 60);
+  if (session) await consume(`recommend:${session.sub}`, 25, 60 * 60);
+  else await consumeByClient("recommend", clientIp(request), { perIp: 20, globalFallback: 2000 }, 60 * 60);
 
   const { limit, ...answers } = bodySchema.parse(await readJson(request));
 

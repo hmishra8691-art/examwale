@@ -6,8 +6,8 @@ import { env } from "@/modules/shared/env";
 
 export const POST = route(async (request: Request) => {
   const { email } = forgotPasswordSchema.parse(await readJson(request));
-  consume(`forgot:email:${email.toLowerCase()}`, 3, 15 * 60);
-  consumeByClient("forgot", clientIp(request), { perIp: 5, globalFallback: 200 }, 15 * 60);
+  await consume(`forgot:email:${email.toLowerCase()}`, 3, 15 * 60);
+  await consumeByClient("forgot", clientIp(request), { perIp: 5, globalFallback: 200 }, 15 * 60);
   const { token } = await requestPasswordReset(email);
 
   // Identical response whether or not the address exists.

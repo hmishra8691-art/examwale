@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { likePattern } from "@/modules/shared/params";
 import {
   aiUsageLogs,
   auditLogs,
@@ -124,7 +125,7 @@ export async function listUsersForAdmin(search?: string) {
       lastLoginAt: users.lastLoginAt,
     })
     .from(users)
-    .where(search ? sql`lower(${users.email}) LIKE ${`%${search.toLowerCase()}%`}` : undefined)
+    .where(search ? sql`lower(${users.email}) LIKE ${likePattern(search)}` : undefined)
     .orderBy(desc(users.createdAt))
     .limit(100);
 }

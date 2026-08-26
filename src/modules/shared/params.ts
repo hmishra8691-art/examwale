@@ -48,3 +48,52 @@ export function oneOf<T extends string>(value: RawParam, allowed: readonly T[]):
 export function flag(value: RawParam): boolean {
   return one(value) === "1" || one(value) === "true";
 }
+
+
+/**
+ * Build a safe `LIKE` pattern from a person's search box.
+ *
+ * Two problems with `%${input}%`, and neither is SQL injection — Drizzle binds
+ * the value, so the query is never malformed. The problems are inside the
+ * pattern:
+ *
+ *  - **The filter becomes attacker-controlled.** A query of `%` matches every
+ *    row, so a search that is supposed to narrow returns the lot.
+ *  - **It is a CPU-exhaustion lever.** Postgres backtracks on alternating
+ *    `%`-and-literal patterns, so `%a%a%a…%b` against a column of 4000-character
+ *    biographies costs exponentially more than it looks like it should. The
+ *    mentor search takes no session and had no rate limit, so a handful of
+ *    concurrent requests was enough to occupy the database.
+ *
+ * Escaping the three metacharacters fixes both, and the length cap means one
+ * request cannot ask for unbounded work regardless. Found by an adversarial
+ * pass across every search surface.
+ */
+export function likePattern(input: string, maxLength = 80): string {
+  const trimmed = input.trim().slice(0, maxLength);
+  const escaped = trimmed
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+  return `%${escaped.toLowerCase()}%`;
+}
+
+
+/**
+ * Whether a stored URL is one we are willing to render as a link.
+ *
+ * `z.string().url()` accepts `javascript:`, `data:` and `vbscript:` — it checks
+ * shape, not scheme. React currently neuters those in an `href`, which is the
+ * only reason this was not already exploitable, and depending on a framework
+ * behaviour for a security property is how it breaks the day the framework
+ * changes. The provider-links validator already did this check; five other
+ * fields that end up in an anchor did not.
+ */
+export function isRenderableUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}

@@ -30,8 +30,8 @@ export const POST = route(async (request: Request) => {
   const session = await getSession();
   // Signed-in users get a per-account limit; anonymous traffic falls back to
   // the per-IP / global pair so one visitor can't be blocked by another's use.
-  if (session) consume(`assess:user:${session.sub}`, 20, 60 * 60);
-  else consumeByClient("assess", clientIp(request), { perIp: 20, globalFallback: 2000 }, 60 * 60);
+  if (session) await consume(`assess:user:${session.sub}`, 20, 60 * 60);
+  else await consumeByClient("assess", clientIp(request), { perIp: 20, globalFallback: 2000 }, 60 * 60);
 
   const answers = bodySchema.parse(await readJson(request));
   const results = await scoreCareers(answers, { limit: 8 });
