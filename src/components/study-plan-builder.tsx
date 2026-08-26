@@ -34,7 +34,6 @@ export function StudyPlanBuilder({
     date.setMonth(date.getMonth() + 8);
     return date.toISOString().slice(0, 10);
   });
-  const [withGuidance, setWithGuidance] = useState(signedIn);
   const [result, setResult] = useState<{
     plan: StudyPlanShape;
     feasibility: Feasibility;
@@ -54,7 +53,6 @@ export function StudyPlanBuilder({
         body: JSON.stringify({
           hoursPerDay: Number(hoursPerDay),
           targetDate,
-          withGuidance: withGuidance && signedIn,
         }),
       });
       const body = await response.json();
@@ -109,23 +107,7 @@ export function StudyPlanBuilder({
           </Button>
         </form>
 
-        {signedIn ? (
-          <label className="mt-4 inline-flex cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={withGuidance}
-              onChange={(event) => setWithGuidance(event.target.checked)}
-              className="mt-0.5 size-4 rounded border-[var(--border)] accent-brand-600"
-            />
-            <span>
-              Add written guidance
-              <span className="block text-xs text-faint">
-                Month-by-month commentary and the usual failure points. Uses one of your daily AI
-                messages. The plan and the feasibility check are computed either way.
-              </span>
-            </span>
-          </label>
-        ) : null}
+        
 
         <p className="mt-3 text-xs text-faint">
           We estimate the workload from the syllabus on this page, at roughly six focused hours per
@@ -166,6 +148,12 @@ export function StudyPlanBuilder({
             </dl>
           </Callout>
 
+          {/*
+            Only ever true for a plan saved before the written commentary was
+            removed. Nothing produces a narrative now; this renders the ones
+            already in the database rather than dropping them silently, and the
+            badge says plainly where the text came from.
+          */}
           {result.plan.narrative ? (
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-2">

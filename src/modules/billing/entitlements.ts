@@ -14,14 +14,17 @@
 import { and, desc, eq, gt, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { plans, subscriptions } from "@/db/schema";
-import { env } from "@/modules/shared/env";
 
 export type Entitlements = {
-  /** AI questions per day. */
-  aiDailyMessages: number;
   /** Mentorship bookings a seeker may hold per calendar month. */
   mentorSessionsPerMonth: number;
-  /** Résumé analyses per calendar month. */
+  /**
+   * Résumé reports per calendar month.
+   *
+   * A cap on a rule-based report is not a compute cost any more — it is a
+   * throttle on a free tier, and it is honest to keep it modest rather than
+   * pretend the limit is technical.
+   */
   resumeAnalysesPerMonth: number;
   /** Saved-search and comparison tools. */
   advancedFilters: boolean;
@@ -48,7 +51,6 @@ export const PLAN_CODES = {
  */
 export function freeEntitlements(): Entitlements {
   return {
-    aiDailyMessages: env.aiFreeDailyLimit,
     mentorSessionsPerMonth: 1,
     resumeAnalysesPerMonth: 2,
     advancedFilters: false,
@@ -60,7 +62,6 @@ export function freeEntitlements(): Entitlements {
 
 export function premiumEntitlements(): Entitlements {
   return {
-    aiDailyMessages: env.aiPremiumDailyLimit,
     mentorSessionsPerMonth: 8,
     resumeAnalysesPerMonth: 20,
     advancedFilters: true,

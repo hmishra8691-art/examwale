@@ -118,7 +118,7 @@ export function CourseEnquiryForm({
         </label>
       </div>
 
-      <fieldset className="rounded-xl border border-[var(--border)] p-4">
+      <fieldset className="rounded-md border border-[var(--border)] p-4">
         <legend className="px-1 text-sm font-medium">What to share</legend>
         <p className="text-xs text-muted">
           Your name and email go with every enquiry — the provider can&rsquo;t answer otherwise.

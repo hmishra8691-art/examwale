@@ -25,8 +25,8 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Admin" className="lg:sticky lg:top-20 lg:self-start">
-      <ul className="flex gap-1 overflow-x-auto scroll-slim pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+    <nav aria-label="Admin" className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+      <ul className="flex flex-wrap gap-1 pb-2 lg:flex-col lg:flex-nowrap lg:pb-0">
         {LINKS.map((link) => {
           const active = link.exact ? pathname === link.href : pathname.startsWith(link.href);
           return (

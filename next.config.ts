@@ -58,6 +58,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  /**
+   * The AI surface is gone; its URLs are not.
+   *
+   * `/chat` and `/ai/*` were live, linked and indexed. Deleting the pages
+   * without these would turn every one of those links — including any a user
+   * bookmarked or a search engine holds — into a 404, which reads as a broken
+   * site rather than a deliberate change. Permanent, because the move is.
+   *
+   * `/chat` has no equivalent: the assistant was not replaced by another tool,
+   * it was replaced by people. It lands on the guidance hub, which says so and
+   * points at the directory.
+   */
+  async redirects() {
+    return [
+      { source: "/chat", destination: "/guidance", permanent: true },
+      { source: "/ai", destination: "/guidance", permanent: true },
+      { source: "/ai/resume", destination: "/guidance/resume", permanent: true },
+      { source: "/ai/interview", destination: "/guidance/interview", permanent: true },
+      { source: "/ai/recommendations", destination: "/guidance/matches", permanent: true },
+    ];
+  },
   experimental: {
     // Route handlers stream AI responses; keep the default node runtime.
   },

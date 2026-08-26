@@ -78,7 +78,7 @@ export function AssessmentWizard({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/v1/ai/assess", {
+      const response = await fetch("/api/v1/assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ export function AssessmentWizard({
               <li key={style.value}>
                 <label
                   className={cx(
-                    "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+                    "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
                     workStyle === style.value ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20" : "hover:bg-[var(--surface-raised)]",
                   )}
                 >
@@ -203,7 +203,7 @@ export function AssessmentWizard({
                 <li key={option.value}>
                   <label
                     className={cx(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+                      "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
                       studyAppetite === option.value ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20" : "hover:bg-[var(--surface-raised)]",
                     )}
                   >
@@ -262,7 +262,7 @@ export function AssessmentWizard({
                 <li key={option.value}>
                   <label
                     className={cx(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+                      "flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors",
                       incomePriority === option.value ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20" : "hover:bg-[var(--surface-raised)]",
                     )}
                   >
@@ -427,7 +427,7 @@ export function AssessmentWizard({
             </Button>
             <Link
               href="/careers"
-              className="inline-flex items-center rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-raised)]"
+              className="inline-flex items-center rounded-md border px-4 py-2.5 text-sm font-medium hover:bg-[var(--surface-raised)]"
             >
               Browse all careers
             </Link>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, Card, cx } from "@/components/ui";
-import { ProviderNote } from "@/components/ai-ui";
+import { RulebookNote } from "@/components/guidance-ui";
 
 type Recommendation = {
   careerSlug: string;
@@ -84,7 +84,7 @@ export function RecommendationsWorkspace({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/v1/ai/recommendations", {
+      const response = await fetch("/api/v1/guidance/matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -180,7 +180,7 @@ export function RecommendationsWorkspace({
                 id="budget"
                 value={budget}
                 onChange={(event) => setBudget(event.target.value)}
-                className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-brand-500"
+                className="w-full rounded-md border bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-brand-500"
               >
                 <option value="">Not sure yet</option>
                 {budgetBands.map((band) => (
@@ -251,7 +251,7 @@ function Select({
         id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-brand-500"
+        className="w-full rounded-md border bg-[var(--surface)] px-3 py-2.5 text-sm outline-none focus:border-brand-500"
       >
         <option value="">No preference</option>
         {options.map((option) => (
@@ -315,14 +315,6 @@ function ResultPanel({
         </Callout>
       ) : null}
 
-      {result.rulesOnly && signedIn ? (
-        <Callout tone="warn" title="Ranking only, no written explanation">
-          <p>
-            This ranking is the scorer&rsquo;s. The written &ldquo;why this fits you&rdquo; needs a
-            language-model key, or you have used today&rsquo;s AI allowance.
-          </p>
-        </Callout>
-      ) : null}
 
       <ol className="space-y-3">
         {result.recommendations.map((entry, index) => (
@@ -400,10 +392,10 @@ function ResultPanel({
             <li key={index}>{line}</li>
           ))}
         </ul>
-        <ProviderNote provider={result.rulesOnly ? "rules" : result.provider}>
-          The order comes from a scorer over real career rows; the AI can adjust it by at most three
-          places and cannot add a career the platform has no guide for.
-        </ProviderNote>
+        <RulebookNote>
+          The order is the scorer&rsquo;s, over careers this platform has a published guide for.
+          Nothing reorders it afterwards.
+        </RulebookNote>
       </Card>
     </div>
   );

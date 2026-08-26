@@ -397,7 +397,7 @@ export function ProfileForm({
       ) : null}
 
       <div className="sticky bottom-4 flex justify-end">
-        <Button type="submit" size="lg" disabled={busy} className="shadow-lg">
+        <Button type="submit" size="lg" disabled={busy}>
           {busy ? "Saving…" : "Save profile"}
         </Button>
       </div>

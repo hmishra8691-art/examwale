@@ -22,8 +22,8 @@ const KIND_LABEL: Record<Suggestion["kind"], { label: string; href: string; tone
 const QUICK_LINKS = [
   { label: "Government exams", href: "/exams" },
   { label: "Careers", href: "/careers" },
-  { label: "Ask the assistant", href: "/chat" },
-  { label: "Résumé review", href: "/ai/resume" },
+  { label: "Find a mentor", href: "/mentors" },
+  { label: "Résumé report", href: "/guidance/resume" },
 ];
 
 /**
@@ -31,7 +31,7 @@ const QUICK_LINKS = [
  *
  * Three things it has to do that a bare input does not: preview real records
  * as you type, stay reachable from the keyboard (⌘K or /), and offer the
- * assistant when what you typed is a question rather than a keyword. That last
+ * mentor directory when what you typed is a question rather than a keyword. That last
  * one matters because this product answers both kinds of input, and the
  * difference is not obvious from a box that says "Search".
  */
@@ -161,13 +161,13 @@ export function GlobalSearch({
     if (active >= 0 && rows[active]) {
       const row = rows[active];
       if (row.type === "hit") return go(`${KIND_LABEL[row.hit.kind].href}/${row.hit.slug}`);
-      if (row.type === "ask") return go(`/chat?q=${encodeURIComponent(trimmed)}`);
+      if (row.type === "ask") return go("/mentors");
       return go(`/search?q=${encodeURIComponent(trimmed)}`);
     }
 
     go(
       looksLikeQuestion
-        ? `/chat?q=${encodeURIComponent(trimmed)}`
+        ? "/mentors"
         : `/search?q=${encodeURIComponent(trimmed)}`,
     );
   }
@@ -201,7 +201,7 @@ export function GlobalSearch({
 
         <div
           className={cx(
-            "flex items-center gap-2 rounded-2xl border bg-[var(--surface-raised)] transition-all",
+            "flex items-center gap-2 rounded-lg border bg-[var(--surface-raised)] transition-all",
             "focus-within:border-brand-500 focus-within:bg-[var(--surface)] focus-within:ring-4 focus-within:ring-brand-500/10",
             tall ? "px-4 py-3" : "px-3.5 py-2.5",
           )}
@@ -280,7 +280,7 @@ export function GlobalSearch({
           id={`${id}-listbox`}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border bg-[var(--surface)] shadow-xl"
+          className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-lg border bg-[var(--surface)] shadow-xl"
         >
           {query.trim().length < 2 ? (
             <div className="p-3">
@@ -342,7 +342,7 @@ export function GlobalSearch({
 
               {!hits.length && !loading ? (
                 <li className="px-3 py-3 text-sm text-muted">
-                  No records match that. The assistant may still be able to help.
+                  No records match that. A mentor can answer a question the guides do not cover.
                 </li>
               ) : null}
 
@@ -376,7 +376,7 @@ export function GlobalSearch({
                   aria-selected={active === hits.length + 1}
                   type="button"
                   onMouseEnter={() => setActive(hits.length + 1)}
-                  onClick={() => go(`/chat?q=${encodeURIComponent(query.trim())}`)}
+                  onClick={() => go("/mentors")}
                   className={cx(
                     "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm",
                     active === hits.length + 1 ? "bg-[var(--surface-raised)]" : "",
@@ -391,7 +391,7 @@ export function GlobalSearch({
                     />
                   </svg>
                   <span className="min-w-0 flex-1 truncate">
-                    Ask the assistant about{" "}
+                    Ask a mentor about{" "}
                     <span className="font-medium">{query.trim()}</span>
                   </span>
                   {looksLikeQuestion ? (

@@ -14,7 +14,6 @@
     "db:backfill": "tsx src/db/backfill/provider-profiles.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.120.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

@@ -570,6 +570,86 @@ One fix broke twelve existing checks, which was the right outcome: a Stage 4
 fixture created an `ACTIVE` employer posting with no approval row, a state that
 cannot occur in reality. The fixture was wrong, not the gate.
 
+### Stage 12 — Human Intelligence, and an editorial surface (built)
+
+Three changes in one release: the AI features are gone, the page no longer
+scrolls sideways, and the visual language is rebuilt around restraint.
+
+**Removing the AI was a subtraction, not a rewrite.** Every tool was built with
+a working rule-based path underneath, because the requirement from day one was
+that the product be fully usable with no API key. The shape was always:
+
+```
+deterministic = scoreResume(text, target)
+if (!provider.isModelBacked) return assemble(deterministic)   // already shipped
+result = await provider.structured(...)                        // model adds prose
+```
+
+Removal meant making the first branch the only branch. `scoreResume`, the STAR
+rubric, `buildQuestionSet`, `scoreAnswer` and `scoreCareers` are untouched. What
+went is the prose layer — and that layer was always the one the README described
+as an addition rather than the product.
+
+The surviving engines moved from `modules/ai/` to **`modules/guidance/`**,
+because the old name had stopped describing them. `/chat` and `/ai/*` redirect
+permanently to `/guidance/*`; deleting live indexed URLs reads as a broken site
+rather than a deliberate change. The assessment endpoint moved off `/api/v1/ai/`
+too — it never called a model, and the path always misdescribed it.
+
+`@anthropic-ai/sdk` is no longer a dependency, and the smoke suite asserts that
+nothing imports a provider and nothing reads an API key. A feature is only
+really removed when it cannot be switched back on by accident.
+
+**"A person will read this" has to survive an empty bench.** This is the risk
+the positioning creates: software scales to 3am on a quiet week and ten mentors
+do not. `countListableMentors()` uses the same gate as the directory listing, so
+the count and the directory can never disagree, and every screen that offers
+human help asks it first. When it returns zero, the résumé report, the interview
+practice, the guidance hub and the dashboard all say plainly that nobody is
+taking requests — and the tools keep working, because they never needed a person
+to run. The directory previously answered an empty result with "try a different
+language filter", which tells a visitor to clear filters they never set; it now
+distinguishes "your filter matched nothing" from "there is nobody listed".
+
+**The horizontal scroll had one root cause.** A grid item defaults to
+`min-width: auto`, so it refuses to be narrower than its content. The dashboard
+nav is a row of nowrap links about 1200px wide, which made the grid column
+1200px inside a 343px phone — every `/dashboard/*` page scrolled sideways by
+852px, and `/provider/*` by 97px. The `overflow-x-auto` on the inner `<ul>`
+could not help: a scroll container has to be the thing that is too narrow, and
+nothing there ever was.
+
+The fix is `min-w-0` on the three nav wrappers, plus `overflow-x: clip` on the
+root as a backstop. `clip` rather than `hidden` matters — `hidden` silently
+kills `position: sticky`, and all three navs are sticky from `lg`. The navs now
+wrap into tidy rows instead of scrolling, which also removed the problem of
+links hidden off the right edge with no indication they were there. Measured
+with Playwright at 320/375/414/768/1280, signed out and signed in: no page
+scrolls sideways anywhere.
+
+**The theme is editorial.** Source Serif 4 for display and figures, Inter for
+body and every control. Warm paper (`#fbfaf8`) instead of white. One accent —
+navy `#2f5175`, 7.9:1 on paper and 8.2:1 under white text. Rules and whitespace
+instead of cards with shadows; radii tightened and shadows removed. The
+confidence colours were deliberately *not* flattened: verified green, estimate
+amber and generated violet are how a reader tells a checked fact from a planning
+figure, so they keep their hues.
+
+Two contrast defects were found and fixed on the way: `--text-faint` sat at
+4.37:1 on the new ground, and the disabled primary button was white on
+`ink-300` at 2.0:1 — unreadable, and it read as broken rather than inactive.
+
+**What premium sells now.** `aiDailyMessages` was a pillar of the paid tier
+(15 free, 100 premium) and is gone from the `Entitlements` type, the plan seed
+rows, the pricing table and the billing page. The tier now rests on mentor
+sessions (1/month free, 8 premium) and résumé reports (2 vs 20) — both of which
+already existed and both of which cost something real to supply.
+
+**The AI tables were not dropped.** `ai_conversations`, `ai_messages`,
+`ai_usage_logs` and the retrieval corpus stay, unwritten, until a later deploy —
+the same expand–migrate–contract discipline used for the Stage 3 column move. A
+code change you can revert is worth more than a tidy schema.
+
 ### Security headers
 
 Set in `next.config.ts` on every response: HSTS (two years, subdomains — not
@@ -787,7 +867,7 @@ pure functions, and they are the ones that decide whether a mentor's published
 hours mean what the mentor typed, so they get tested at the arithmetic rather
 than only through a fixture.
 
-578 checks covering every route signed-out and signed-in, authorisation
+611 checks covering every route signed-out and signed-in, authorisation
 boundaries, input validation, the publish gate, the reality-check engine, the
 AI chat stream, the crisis-routing safety filter, regression tests for each
 security fix listed below, and — for Phases 2 to 4 — each of the gates described

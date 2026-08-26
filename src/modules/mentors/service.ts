@@ -254,6 +254,28 @@ export function isListable(mentor: { status: string; credentialVerifiedAt: Date 
   return mentor.status === "ACTIVE" && mentor.credentialVerifiedAt != null;
 }
 
+/**
+ * How many mentors a visitor could actually reach right now.
+ *
+ * This exists because the product's central claim is that a person — not a
+ * model — reads your work and answers you. A claim like that is only worth
+ * making if the page can tell the truth when it is not currently true. Every
+ * screen that offers human help asks this first, so "a mentor will read this"
+ * degrades to "nobody is taking requests at the moment" instead of sending
+ * somebody to an empty directory.
+ *
+ * Deliberately the same gate as the listing query, so the number and the
+ * directory can never disagree.
+ */
+export async function countListableMentors(): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(mentors)
+    .innerJoin(providerProfiles, eq(providerProfiles.userId, mentors.userId))
+    .where(listableCondition());
+  return row?.total ?? 0;
+}
+
 // ---------------------------------------------------------------------------
 // Reads
 // ---------------------------------------------------------------------------

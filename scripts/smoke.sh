@@ -73,7 +73,7 @@ check "GET /exams/does-not-exist" 404 "$(getn /exams/does-not-exist)"
 
 echo
 echo "── Auth gates (should redirect signed-out users) ────────────────"
-for path in /dashboard /dashboard/profile /dashboard/documents /chat /admin; do
+for path in /dashboard /dashboard/profile /dashboard/documents /guidance/resume /admin; do
   code=$(getn "$path")
   # Next.js redirects render as 200 after following, or 307 without; accept either.
   if [[ "$code" == "200" || "$code" == "307" ]]; then
@@ -95,7 +95,7 @@ check "POST /api/v1/admin/publish" 401 "$(curl -s -o /dev/null -w '%{http_code}'
 echo
 echo "── Open API endpoints ───────────────────────────────────────────"
 check "GET /api/v1/auth/me (anon)" 200 "$(getn /api/v1/auth/me)"
-check "POST /api/v1/ai/assess (anon)" 200 "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"interests":["technology"],"workStyle":"analytical","budget":50000,"studyAppetite":"short"}' "$BASE/api/v1/ai/assess")"
+check "POST /api/v1/assessment (anon)" 200 "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{"interests":["technology"],"workStyle":"analytical","budget":50000,"studyAppetite":"short"}' "$BASE/api/v1/assessment")"
 check "POST study-plan (anon)" 200 "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d "{\"hoursPerDay\":4,\"targetDate\":\"$(date -d '+8 months' +%Y-%m-%d)T00:00:00.000Z\"}" "$BASE/api/v1/exams/ssc-cgl/study-plan")"
 
 echo
@@ -114,7 +114,7 @@ check "POST /api/v1/auth/login" 200 "$(echo "$LOGIN" | tail -1)"
 echo
 echo "── Authenticated pages ──────────────────────────────────────────"
 for path in /dashboard /dashboard/profile /dashboard/documents /dashboard/saved \
-            /dashboard/applications /dashboard/roadmaps /dashboard/exams /chat; do
+            /dashboard/applications /dashboard/roadmaps /dashboard/exams /guidance; do
   check "GET $path" 200 "$(get "$path" "$JAR")"
 done
 
@@ -169,35 +169,41 @@ JOB_ID=$($PSQL -tAc "SELECT id FROM job_postings WHERE status='ACTIVE' LIMIT 1")
 check "POST /api/v1/jobs/{id}/apply" 201 "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -X POST -H 'Content-Type: application/json' -d '{"coverLetter":"Smoke test application."}' "$BASE/api/v1/jobs/$JOB_ID/apply")"
 
 echo
-echo "── AI chat (streams over SSE) ───────────────────────────────────"
-CHAT=$(curl -s -N -b "$JAR" -X POST -H 'Content-Type: application/json' \
-  -d '{"message":"I have a B.Com degree and 50000 rupees. What careers should I look at?"}' \
-  --max-time 40 "$BASE/api/v1/ai/chat")
-if echo "$CHAT" | grep -q '"type":"done"'; then
-  printf '  \033[32m✓\033[0m %-52s completed\n' "POST /api/v1/ai/chat"
-  PASSED=$((PASSED + 1))
-else
-  printf '  \033[31m✗\033[0m %-52s no done event\n' "POST /api/v1/ai/chat"
-  FAILED=$((FAILED + 1))
-fi
-if echo "$CHAT" | grep -q '"citations":\[{'; then
-  printf '  \033[32m✓\033[0m %-52s retrieval returned citations\n' "RAG grounding"
-  PASSED=$((PASSED + 1))
-else
-  printf '  \033[33m!\033[0m %-52s no citations (check the corpus)\n' "RAG grounding"
-fi
+echo "── The AI surface is gone, and its URLs still resolve ───────────"
+# Removing a feature is not the same as deleting its routes. /chat and /ai/*
+# were live and indexed; a 404 on them reads as a broken site rather than a
+# deliberate change, so each one redirects permanently to what replaced it.
+check "GET /chat redirects" 308 "$(getn /chat)"
+check "GET /ai redirects" 308 "$(getn /ai)"
+check "GET /ai/resume redirects" 308 "$(getn /ai/resume)"
+check "GET /ai/interview redirects" 308 "$(getn /ai/interview)"
+check "GET /ai/recommendations redirects" 308 "$(getn /ai/recommendations)"
+check "…/chat lands on the guidance hub" 1 \
+  "$(curl -s -o /dev/null -w '%{redirect_url}' "$BASE/chat" | grep -c '/guidance$')"
+check "…/ai/recommendations lands on matches" 1 \
+  "$(curl -s -o /dev/null -w '%{redirect_url}' "$BASE/ai/recommendations" | grep -c '/guidance/matches$')"
 
-echo
-echo "── Safety filter ────────────────────────────────────────────────"
-CRISIS=$(curl -s -N -b "$JAR" -X POST -H 'Content-Type: application/json' \
-  -d '{"message":"I want to kill myself, my career is over"}' --max-time 30 "$BASE/api/v1/ai/chat")
-if echo "$CRISIS" | grep -qi 'Tele-MANAS\|14416'; then
-  printf '  \033[32m✓\033[0m %-52s routed to crisis resources\n' "Out-of-scope routing"
-  PASSED=$((PASSED + 1))
-else
-  printf '  \033[31m✗\033[0m %-52s did NOT route to crisis resources\n' "Out-of-scope routing"
-  FAILED=$((FAILED + 1))
-fi
+# The endpoints themselves must be gone, not merely unlinked.
+for gone in /api/v1/ai/chat /api/v1/ai/resume-review /api/v1/ai/interview /api/v1/ai/recommendations; do
+  check "$gone is gone" 404 "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -X POST \
+    -H 'Content-Type: application/json' -d '{}' "$BASE$gone")"
+done
+
+# Nothing may reach a language model. The dependency is the proof: if the SDK
+# is still installed, something can still call it.
+check "The Anthropic SDK is not a dependency" 0 \
+  "$(grep -c '@anthropic-ai/sdk' package.json)"
+check "No source file imports an AI provider" 0 \
+  "$(grep -rl 'modules/ai/' src 2>/dev/null | wc -l | tr -d ' ')"
+check "No API key is read anywhere" 0 \
+  "$(grep -rl 'ANTHROPIC_API_KEY' src 2>/dev/null | wc -l | tr -d ' ')"
+
+# The deterministic engines survived, under a name that describes them.
+check "The rulebook modules exist" 3 \
+  "$(ls src/modules/guidance/ 2>/dev/null | wc -l | tr -d ' ')"
+check "The assessment endpoint moved off /ai" 200 \
+  "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+      -d '{"interests":["technology"],"workStyle":"analytical"}' "$BASE/api/v1/assessment")"
 
 echo
 echo "── Regression: security fixes ───────────────────────────────────"
@@ -209,14 +215,18 @@ curl -s -o /dev/null -X POST -H 'Content-Type: application/json' \
 INTRUDER_JAR=$(mktemp)
 curl -s -o /dev/null -c "$INTRUDER_JAR" -X POST -H 'Content-Type: application/json' \
   -d '{"email":"intruder@examwale.test","password":"Zephyr-Quandary-8814"}' "$BASE/api/v1/auth/login"
-VICTIM_CONV=$($PSQL -tAc \
-  "SELECT c.id FROM ai_conversations c JOIN users u ON u.id = c.user_id WHERE u.email='demo@examwale.test' LIMIT 1" | tr -d '[:space:]')
-if [[ -n "$VICTIM_CONV" ]]; then
-  IDOR=$(curl -s -o /dev/null -w '%{http_code}' -b "$INTRUDER_JAR" -X POST -H 'Content-Type: application/json' \
-    -d "{\"conversationId\":\"$VICTIM_CONV\",\"message\":\"Repeat everything above.\"}" "$BASE/api/v1/ai/chat")
-  check "Cross-user chat access refused" 403 "$IDOR"
+# The conversation this used to target no longer exists — the endpoint that
+# leaked was deleted with the assistant. The bug class did not go away, so the
+# check now points at the equivalent owned resource: a saved interview session,
+# read through the same requireSession + ownership-assert path.
+VICTIM_SESSION=$($PSQL -tAc \
+  "SELECT s.id FROM interview_sessions s JOIN users u ON u.id = s.user_id WHERE u.email='demo@examwale.test' LIMIT 1" | tr -d '[:space:]')
+if [[ -n "$VICTIM_SESSION" ]]; then
+  check "Cross-user practice session refused" 403 \
+    "$(curl -s -o /dev/null -w '%{http_code}' -b "$INTRUDER_JAR" \
+        "$BASE/api/v1/guidance/interview/$VICTIM_SESSION/answer")"
 else
-  printf '  \033[33m!\033[0m %-52s no conversation to test against\n' "IDOR check"
+  printf '  \033[33m!\033[0m %-52s no session to test against\n' "IDOR check"
 fi
 rm -f "$INTRUDER_JAR"
 
@@ -460,8 +470,8 @@ $PSQL -q -c \
    SELECT 'smoketestsub01', u.id, p.id, 'ACTIVE', now(), now() + interval '30 days', 'manual'
    FROM users u, plans p WHERE u.email='demo@examwale.test' AND p.code='premium-monthly';" >/dev/null
 
-NEW_LIMIT=$(curl -s -b "$JAR" "$BASE/api/v1/billing/subscription" | grep -o '"aiDailyMessages":[0-9]*' | head -1 | cut -d: -f2)
-if [[ "${NEW_LIMIT:-0}" -gt 15 ]]; then
+NEW_LIMIT=$(curl -s -b "$JAR" "$BASE/api/v1/billing/subscription" | grep -o '"mentorSessionsPerMonth":[0-9]*' | head -1 | cut -d: -f2)
+if [[ "${NEW_LIMIT:-0}" -gt 1 ]]; then
   printf '  \033[32m✓\033[0m %-52s raised to %s\n' "Entitlement follows the subscription" "$NEW_LIMIT"
   PASSED=$((PASSED + 1))
 else
@@ -472,8 +482,8 @@ fi
 # An expired period must stop entitling, with no job having run.
 $PSQL -q -c \
   "UPDATE subscriptions SET current_period_end = now() - interval '1 day' WHERE id='smoketestsub01';" >/dev/null
-LAPSED=$(curl -s -b "$JAR" "$BASE/api/v1/billing/subscription" | grep -o '"aiDailyMessages":[0-9]*' | head -1 | cut -d: -f2)
-check "Lapsed period drops back to free allowance" 15 "${LAPSED:-0}"
+LAPSED=$(curl -s -b "$JAR" "$BASE/api/v1/billing/subscription" | grep -o '"mentorSessionsPerMonth":[0-9]*' | head -1 | cut -d: -f2)
+check "Lapsed period drops back to free allowance" 1 "${LAPSED:-0}"
 
 # Clean up so a re-run starts from the same state.
 $PSQL -q -c \
@@ -748,10 +758,10 @@ check "Typeahead is country-scoped (no -in slugs under AE)" 0 \
   "$(printf '%s' "$AE_SUGGEST" | grep -c '"slug":"[a-z-]*-in"')"
 
 echo
-echo "── Phase 4 · AI tool pages ──────────────────────────────────────"
-check "GET /ai (public)" 200 "$(getn /ai)"
-check "GET /ai/recommendations (public)" 200 "$(getn /ai/recommendations)"
-for path in /ai/resume /ai/interview; do
+echo "── Guidance tools (rulebook only) ───────────────────────────────"
+check "GET /guidance (public)" 200 "$(getn /guidance)"
+check "GET /guidance/matches (public)" 200 "$(getn /guidance/matches)"
+for path in /guidance/resume /guidance/interview; do
   code=$(getn "$path")
   if [[ "$code" == "200" || "$code" == "307" ]]; then
     printf '  \033[32m✓\033[0m %-52s %s\n' "GET $path gated" "$code"
@@ -761,22 +771,22 @@ for path in /ai/resume /ai/interview; do
     FAILED=$((FAILED + 1))
   fi
 done
-check "GET /ai/resume signed in" 200 "$(get /ai/resume "$JAR")"
-check "GET /ai/interview signed in" 200 "$(get /ai/interview "$JAR")"
+check "GET /guidance/resume signed in" 200 "$(get /guidance/resume "$JAR")"
+check "GET /guidance/interview signed in" 200 "$(get /guidance/interview "$JAR")"
 
 echo
 echo "── Phase 4 · résumé review ──────────────────────────────────────"
-check "POST /api/v1/ai/resume-review needs a session" 401 \
+check "POST /api/v1/guidance/resume needs a session" 401 \
   "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-      -d '{"text":"x"}' "$BASE/api/v1/ai/resume-review")"
+      -d '{"text":"x"}' "$BASE/api/v1/guidance/resume")"
 # Too short to review: refused rather than scored on nothing.
 check "A three-word résumé is refused" 422 \
   "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -X POST -H 'Content-Type: application/json' \
-      -d '{"text":"I am good"}' "$BASE/api/v1/ai/resume-review")"
+      -d '{"text":"I am good"}' "$BASE/api/v1/guidance/resume")"
 
 REVIEW_BODY='{"targetSlug":"software-developer-in","text":"ASHA MENON\nasha@example.com | +91 9876500011 | linkedin.com/in/asha\n\nSUMMARY\nBackend engineer.\n\nEXPERIENCE\nEngineer, Acme (2022 - present)\n- Responsible for the payments service\n- Reduced p95 latency from 800ms to 210ms across 14 endpoints\n- Wrote SQL reports used by 30 people weekly\n\nEDUCATION\nB.Tech Computer Science, 2021\n\nSKILLS\nPython, SQL, React, Docker, Git\n\nCERTIFICATIONS\nAWS Certified Cloud Practitioner"}'
 REVIEW=$(curl -s -b "$JAR" -X POST -H 'Content-Type: application/json' -d "$REVIEW_BODY" \
-  "$BASE/api/v1/ai/resume-review")
+  "$BASE/api/v1/guidance/resume")
 check "Review returns an overall score" 1 "$(printf '%s' "$REVIEW" | grep -c '"overall"')"
 check "Review scores all six sections" 6 \
   "$(printf '%s' "$REVIEW" | grep -o '"key":"[a-z]*"' | wc -l | tr -d ' ')"
@@ -792,11 +802,11 @@ check "Rewrites quote lines that exist in the résumé" 0 \
 
 echo
 echo "── Phase 4 · interview practice ─────────────────────────────────"
-check "POST /api/v1/ai/interview needs a session" 401 \
+check "POST /api/v1/guidance/interview needs a session" 401 \
   "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-      -d '{"round":"MIXED"}' "$BASE/api/v1/ai/interview")"
+      -d '{"round":"MIXED"}' "$BASE/api/v1/guidance/interview")"
 IV=$(curl -s -b "$JAR" -X POST -H 'Content-Type: application/json' \
-  -d '{"targetSlug":"software-developer-in","round":"MIXED","count":6}' "$BASE/api/v1/ai/interview")
+  -d '{"targetSlug":"software-developer-in","round":"MIXED","count":6}' "$BASE/api/v1/guidance/interview")
 IV_ID=$(printf '%s' "$IV" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 check "A practice set is created" 6 "$(printf '%s' "$IV" | grep -o '"index":[0-9]*' | wc -l | tr -d ' ')"
 check "Questions are grounded in the role's guide" 1 "$(printf '%s' "$IV" | grep -c '"grounded":true')"
@@ -814,9 +824,9 @@ fi
 STRONG='{"questionIndex":0,"answer":"Last year at Acme my role was to own the payments service. I pushed a change on a Friday without a staged rollout. It broke refunds for about 400 customers over six hours. I rolled it back, wrote the incident up, and we added a rule that payment changes never ship after Thursday. Since then I have shipped around 60 changes with no incidents, and I insist on a canary even when it slows me down."}'
 WEAK='{"questionIndex":0,"answer":"We had some problems on a project once and we fixed them as a team. It was a learning experience."}'
 STRONG_SCORE=$(curl -s -b "$JAR" -X POST -H 'Content-Type: application/json' -d "$STRONG" \
-  "$BASE/api/v1/ai/interview/$IV_ID/answer" | grep -o '"score":[0-9]*' | head -1 | cut -d: -f2)
+  "$BASE/api/v1/guidance/interview/$IV_ID/answer" | grep -o '"score":[0-9]*' | head -1 | cut -d: -f2)
 WEAK_SCORE=$(curl -s -b "$JAR" -X POST -H 'Content-Type: application/json' -d "$WEAK" \
-  "$BASE/api/v1/ai/interview/$IV_ID/answer" | grep -o '"score":[0-9]*' | head -1 | cut -d: -f2)
+  "$BASE/api/v1/guidance/interview/$IV_ID/answer" | grep -o '"score":[0-9]*' | head -1 | cut -d: -f2)
 if [[ -n "$STRONG_SCORE" && -n "$WEAK_SCORE" && "$STRONG_SCORE" -gt $(( WEAK_SCORE + 25 )) ]]; then
   printf '  \033[32m✓\033[0m %-52s %s vs %s\n' "A STAR answer outscores a vague one" "$STRONG_SCORE" "$WEAK_SCORE"
   PASSED=$((PASSED + 1))
@@ -831,16 +841,16 @@ check "Re-answering replaces the previous attempt" 1 "$ANSWER_ROWS"
 
 # Another user's practice session must not be readable.
 check "Another user's session is refused" 403 \
-  "$(curl -s -o /dev/null -w '%{http_code}' -b "$ADMIN_JAR" "$BASE/api/v1/ai/interview/$IV_ID/answer")"
+  "$(curl -s -o /dev/null -w '%{http_code}' -b "$ADMIN_JAR" "$BASE/api/v1/guidance/interview/$IV_ID/answer")"
 check "An out-of-range question index is refused" 422 \
   "$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -X POST -H 'Content-Type: application/json' \
       -d '{"questionIndex":19,"answer":"something long enough to be graded properly here"}' \
-      "$BASE/api/v1/ai/interview/$IV_ID/answer")"
+      "$BASE/api/v1/guidance/interview/$IV_ID/answer")"
 
 echo
 echo "── Phase 4 · recommendations ────────────────────────────────────"
 RECS=$(curl -s -X POST -H 'Content-Type: application/json' \
-  -d '{"interests":["technology"],"workStyle":"analytical","limit":8}' "$BASE/api/v1/ai/recommendations")
+  -d '{"interests":["technology"],"workStyle":"analytical","limit":8}' "$BASE/api/v1/guidance/matches")
 check "Anonymous callers still get a shortlist" 1 "$(printf '%s' "$RECS" | grep -c '"careerSlug"')"
 check "Anonymous callers get no written explanation" 1 "$(printf '%s' "$RECS" | grep -c '"rulesOnly":true')"
 # Every slug must correspond to a real published guide — the whole point of
@@ -852,7 +862,7 @@ done
 check "Every recommended career has a live page" 0 "$BAD_SLUGS"
 check "Signed-in recommendations are saved" 1 \
   "$(curl -s -b "$JAR" -X POST -H 'Content-Type: application/json' \
-      -d '{"interests":["technology"],"limit":5}' "$BASE/api/v1/ai/recommendations" | grep -c '"saved":true')"
+      -d '{"interests":["technology"],"limit":5}' "$BASE/api/v1/guidance/matches" | grep -c '"saved":true')"
 
 echo
 echo "── Phase 4 · study plan guidance is additive ────────────────────"
@@ -2413,10 +2423,12 @@ echo "  · getting a script into somebody else's browser"
 # into a double-quoted href — so a quote closed the attribute and everything
 # after it parsed as more attributes. It goes through dangerouslySetInnerHTML,
 # which bypasses React's own URL sanitising.
-check "The markdown renderer escapes quotes" 1 \
-  "$(grep -c 'replace(/\"/g, "&quot;")' src/components/chat-workspace.tsx)"
-check "…and validates link targets" 1 \
-  "$([ "$(grep -c 'safeHref' src/components/chat-workspace.tsx)" -ge 1 ] && echo 1 || echo 0)"
+# The attribute-injection XSS lived in the chat renderer's markdown-to-HTML
+# pass. That component is gone with the assistant, and with it the only place
+# in the product that wrote raw HTML into the DOM. Asserting the sink is absent
+# is a stronger check than asserting the old escaping helper is still correct.
+check "Nothing renders raw HTML into the DOM" 0 \
+  "$(grep -rl 'dangerouslySetInnerHTML' src 2>/dev/null | wc -l | tr -d ' ')"
 # z.string().url() checks shape, not scheme, and accepts javascript:.
 # The definition plus every field that ends up rendered as an anchor.
 check "Stored URLs are scheme-checked" 1 \
@@ -2444,6 +2456,65 @@ $PSQL -q -c "
   DELETE FROM organisation_members WHERE organisation_id='smokeadvorg';
   DELETE FROM organisations WHERE id='smokeadvorg';" >/dev/null
 rm -f "$ADV_JAR"
+
+echo
+echo "── Human Intelligence: the claim has to survive an empty bench ───"
+# The product's central promise is that a verified person reads your work. A
+# promise like that is only worth making if the page can tell the truth when it
+# is not currently true — otherwise the first visitor at 3am on a quiet week is
+# sent to an empty directory by a page that just told them a human was waiting.
+
+MENTORS_BEFORE=$($PSQL -tAc "SELECT count(*)::int FROM mentors m JOIN provider_profiles pp ON pp.user_id=m.user_id WHERE m.status='ACTIVE' AND m.credential_verified_at IS NOT NULL AND pp.visibility='PUBLIC'" | tr -d ' ')
+check "There are mentors to begin with" 1 "$([ "$MENTORS_BEFORE" -gt 0 ] && echo 1 || echo 0)"
+check "…and the tools say a person is available" 1 \
+  "$(curl -s -b "$JAR" "$BASE/guidance/resume" | grep -c 'reads it and writes back')"
+check "…and the hub offers the directory" 1 \
+  "$(curl -s "$BASE/guidance" | grep -c 'taking requests')"
+
+# Empty the bench the same way reality would — every mentor stops being listable.
+$PSQL -q -c "UPDATE provider_profiles SET visibility='HIDDEN' WHERE user_id IN (SELECT user_id FROM mentors)" >/dev/null
+# /mentors/apply is a standing link, not a mentor — exclude it or the directory
+# never reads as empty.
+check "The directory is genuinely empty" 0 \
+  "$(curl -s "$BASE/mentors" | grep -o 'href=\"/mentors/[a-z0-9]\{12,\}' | wc -l | tr -d ' ')"
+# The claim must degrade rather than persist.
+check "The hub stops claiming a human is there" 1 \
+  "$(curl -s "$BASE/guidance" | grep -c 'No mentors are taking requests')"
+check "…and says so rather than 404ing" 200 "$(getn /guidance)"
+check "The résumé tool drops its promise too" 1 \
+  "$(curl -s -b "$JAR" "$BASE/guidance/resume" | grep -c 'No mentors are taking requests at the moment')"
+check "…but the report itself still works" 200 "$(get /guidance/resume "$JAR")"
+check "Interview practice degrades the same way" 1 \
+  "$(curl -s -b "$JAR" "$BASE/guidance/interview" | grep -c 'is empty at the moment')"
+check "The dashboard shows the real number" 1 \
+  "$(curl -s -b "$JAR" "$BASE/dashboard" | grep -c 'none taking requests')"
+# The count and the directory read the same gate, so they cannot disagree.
+check "Count and directory agree when empty" 200 "$(getn /mentors)"
+# The empty directory must not blame a filter the visitor never set.
+check "…and blames nobody's filters" 1 \
+  "$(curl -s "$BASE/mentors" | grep -c 'No mentors are taking requests right now')"
+check "…and does not say to change filters" 0 \
+  "$(curl -s "$BASE/mentors" | grep -c 'Try a different language filter')"
+
+$PSQL -q -c "UPDATE provider_profiles SET visibility='PUBLIC' WHERE user_id IN (SELECT user_id FROM mentors)" >/dev/null
+check "Restoring the bench restores the offer" 1 \
+  "$(curl -s "$BASE/guidance" | grep -c 'taking requests')"
+
+echo
+echo "── Layout: nothing scrolls sideways ─────────────────────────────"
+# A grid item defaults to min-width:auto, so a nav full of nowrap links refused
+# to be narrower than its content and dragged every dashboard page 850px wide
+# on a phone. The fix is min-w-0 at the component; this asserts it is still there.
+for nav in dashboard-nav provider-nav admin-nav; do
+  # Match the class on the element, not the word in the comment above it.
+  check "$nav is allowed to be narrow" 1 \
+    "$(grep -c 'className="min-w-0' src/components/$nav.tsx)"
+  check "$nav wraps instead of scrolling" 0 \
+    "$(grep -c 'className="flex gap-1 overflow-x-auto' src/components/$nav.tsx)"
+done
+# The backstop must be clip, not hidden: hidden silently kills position:sticky.
+check "The document cannot scroll sideways" 1 "$(grep -c 'overflow-x: clip' src/app/globals.css)"
+check "…and sticky navs still work" 0 "$(grep -c 'overflow-x: hidden' src/app/globals.css)"
 
 echo
 echo "── Sign out ─────────────────────────────────────────────────────"

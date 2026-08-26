@@ -48,18 +48,6 @@ export const env = {
   get googleEnabled() {
     return Boolean(optional("GOOGLE_CLIENT_ID") && optional("GOOGLE_CLIENT_SECRET"));
   },
-  get anthropicApiKey() {
-    return optional("ANTHROPIC_API_KEY");
-  },
-  get aiModel() {
-    return optional("AI_MODEL", "claude-sonnet-4-5");
-  },
-  get aiFreeDailyLimit() {
-    return num("AI_FREE_DAILY_MESSAGE_LIMIT", 15);
-  },
-  get aiPremiumDailyLimit() {
-    return num("AI_PREMIUM_DAILY_MESSAGE_LIMIT", 500);
-  },
   /**
    * 'postgres' | 'local'.
    *

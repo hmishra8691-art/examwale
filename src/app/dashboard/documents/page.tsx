@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { requirePage } from "@/modules/auth/session";
 import { listDocuments } from "@/modules/documents/service";
-import { getProvider } from "@/modules/ai/provider";
 import { DocumentsWorkspace } from "@/components/documents-workspace";
 import { Callout } from "@/components/ui";
 
@@ -36,7 +35,6 @@ export default async function DocumentsPage() {
           ...document,
           uploadedAt: document.uploadedAt.toISOString(),
         }))}
-        modelBacked={getProvider().isModelBacked}
       />
     </div>
   );

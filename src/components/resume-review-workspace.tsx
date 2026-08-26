@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, Card, cx } from "@/components/ui";
-import { PriorityTag, ProviderNote, ScoreDial, ScoreRow } from "@/components/ai-ui";
+import { PriorityTag, RulebookNote, ScoreDial, ScoreRow } from "@/components/guidance-ui";
 import type { ResumeReviewShape } from "@/db/schema";
 
 type StoredDocument = { id: string; filename: string; uploadedAt: string };
@@ -37,7 +37,7 @@ export function ResumeReviewWorkspace({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/v1/ai/resume-review", {
+      const response = await fetch("/api/v1/guidance/resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -111,7 +111,7 @@ export function ResumeReviewWorkspace({
                 onChange={(event) => setText(event.target.value)}
                 rows={12}
                 placeholder="Paste the whole thing — headings, bullets and all. The structure is part of what's being reviewed."
-                className="w-full resize-y rounded-xl border bg-[var(--surface)] px-3.5 py-3 text-sm leading-relaxed outline-none placeholder:text-faint focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+                className="w-full resize-y rounded-md border bg-[var(--surface)] px-3.5 py-3 text-sm leading-relaxed outline-none placeholder:text-faint focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
               />
               <p className="mt-1.5 text-xs text-faint">
                 {pastedWords} words
@@ -130,7 +130,7 @@ export function ResumeReviewWorkspace({
               id="target"
               value={targetSlug}
               onChange={(event) => setTargetSlug(event.target.value)}
-              className="w-full max-w-md rounded-xl border bg-[var(--surface)] px-3.5 py-2.5 text-sm outline-none focus:border-brand-500"
+              className="w-full max-w-md rounded-md border bg-[var(--surface)] px-3.5 py-2.5 text-sm outline-none focus:border-brand-500"
             >
               <option value="">No specific role — general review</option>
               {targets.map((option) => (
@@ -189,7 +189,7 @@ function SourceButton({
       disabled={disabled}
       aria-pressed={active}
       className={cx(
-        "min-w-[13rem] flex-1 rounded-xl border px-3.5 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "min-w-[13rem] flex-1 rounded-md border px-3.5 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         active
           ? "border-brand-500 bg-brand-50 dark:bg-brand-900/25"
           : "hover:bg-[var(--surface-raised)]",
@@ -219,7 +219,7 @@ function ReviewResult({ data }: { data: ReviewResponse }) {
             }
           />
           {highPriority.length ? (
-            <div className="min-w-[14rem] flex-1 rounded-xl border border-red-200 bg-red-50/60 p-3 dark:border-red-900 dark:bg-red-900/15">
+            <div className="min-w-[14rem] flex-1 rounded-md border border-red-200 bg-red-50/60 p-3 dark:border-red-900 dark:bg-red-900/15">
               <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
                 Fix first
               </p>
@@ -243,7 +243,7 @@ function ReviewResult({ data }: { data: ReviewResponse }) {
           ))}
         </ul>
 
-        <ProviderNote provider={data.provider} />
+        <RulebookNote />
       </Card>
 
       {review.fixes.length ? (
@@ -272,7 +272,7 @@ function ReviewResult({ data }: { data: ReviewResponse }) {
           </p>
           <ul className="space-y-4">
             {review.rewrites.map((rewrite, index) => (
-              <li key={index} className="rounded-xl border p-3">
+              <li key={index} className="rounded-md border p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-faint">Before</p>
                 <p className="mt-1 text-[13px] leading-relaxed text-muted line-through decoration-red-400/60">
                   {rewrite.before}

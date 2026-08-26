@@ -65,7 +65,7 @@ export default async function AdvertisingReviewPage() {
                 {entry.creatives.map((creative) => (
                   <li
                     key={creative.id}
-                    className="rounded-xl border border-dashed border-[var(--border)] p-4"
+                    className="rounded-md border border-dashed border-[var(--border)] p-4"
                   >
                     <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
                       {creative.disclosureLabel} · {AD_SLOTS[creative.slot as keyof typeof AD_SLOTS] ?? creative.slot}

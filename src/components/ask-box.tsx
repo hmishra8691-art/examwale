@@ -5,10 +5,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 
 /**
- * The landing page's single input. A natural-language question routes into the
- * assistant when the user is signed in, and into search when they aren't —
- * browsing is deliberately open, and the sign-in wall only appears where the
- * answer becomes personal.
+ * The landing page's single input.
+ *
+ * It used to fork: a signed-in visitor's question went to the assistant, a
+ * signed-out one's went to search. There is no assistant now, so it does not
+ * fork — everything goes to search, which reads the same corpus the assistant
+ * was grounded in and shows the guides themselves rather than a paraphrase of
+ * them. Where search finds nothing, it offers a mentor.
  */
 export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: boolean }) {
   const router = useRouter();
@@ -19,10 +22,7 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
     const trimmed = question.trim();
     if (!trimmed) return;
     setBusy(true);
-    const target = signedIn
-      ? `/chat?q=${encodeURIComponent(trimmed)}`
-      : `/search?q=${encodeURIComponent(trimmed)}`;
-    router.push(target);
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
   }
 
   return (
@@ -32,7 +32,7 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
           event.preventDefault();
           submit(value);
         }}
-        className="rounded-2xl border bg-[var(--surface)] p-2 shadow-sm focus-within:border-brand-500"
+        className="rounded-md border bg-[var(--surface)] p-2 focus-within:border-brand-500"
       >
         <label htmlFor="ask" className="sr-only">
           Tell us about yourself and what you want to achieve
@@ -53,10 +53,10 @@ export function AskBox({ examples, signedIn }: { examples: string[]; signedIn: b
         />
         <div className="flex items-center justify-between gap-2 px-1 pb-1">
           <p className="hidden text-xs text-faint sm:block">
-            {signedIn ? "Answers use your profile." : "No account needed to look around."}
+            {signedIn ? "Searches every guide on the platform." : "No account needed to look around."}
           </p>
           <Button type="submit" disabled={busy || !value.trim()} size="sm">
-            {busy ? "Working…" : signedIn ? "Ask" : "Find answers"}
+            {busy ? "Working…" : "Search the guides"}
           </Button>
         </div>
       </form>

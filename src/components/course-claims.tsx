@@ -61,7 +61,7 @@ export function OutcomeClaims({ claims }: { claims: OutcomeClaim[] }) {
           return (
             <li
               key={claim.id}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs uppercase tracking-wide text-muted">

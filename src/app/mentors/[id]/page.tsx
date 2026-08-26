@@ -136,7 +136,7 @@ export default async function MentorProfilePage({ params }: Props) {
                 {credentials.map((credential) => (
                   <li
                     key={credential.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] p-3"
                   >
                     <div>
                       <p className="text-sm font-medium">{credential.title}</p>
@@ -175,7 +175,7 @@ export default async function MentorProfilePage({ params }: Props) {
             {reviews.length ? (
               <ul className="mt-4 space-y-3">
                 {reviews.map((entry) => (
-                  <li key={entry.review.id} className="rounded-xl border border-[var(--border)] p-4">
+                  <li key={entry.review.id} className="rounded-md border border-[var(--border)] p-4">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-medium">
                         {entry.reviewerName ?? "A seeker"}

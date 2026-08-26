@@ -503,7 +503,7 @@ export async function cohortDisclosureForUser(userId: string) {
       "Your assessment answers or results",
       "Your roadmaps, goals or study plans",
       "Which jobs you looked at or applied to",
-      "Your conversations with the assistant",
+      "Your saved conversations with the assistant, from before it was withdrawn",
       "Your documents or anything extracted from them",
       "Anything at all identified to you personally",
     ],

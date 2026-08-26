@@ -102,14 +102,14 @@ export default async function SearchPage({ searchParams }: { searchParams: Searc
           {result.hits.length === 0 ? (
             <EmptyState
               title={`Nothing found for "${query}"`}
-              description="Try fewer words, or browse by category instead. If you're asking a question rather than searching for a thing, the assistant may serve you better."
+              description="Try fewer words, or browse by category instead. If you're asking a question rather than searching for a thing, a mentor can answer it properly."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <ButtonLink href="/careers" variant="secondary" size="sm">
                     Browse careers
                   </ButtonLink>
-                  <ButtonLink href={session ? "/chat" : "/signup"} size="sm">
-                    Ask the assistant
+                  <ButtonLink href="/mentors" size="sm">
+                    Ask a mentor
                   </ButtonLink>
                 </div>
               }

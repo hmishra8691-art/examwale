@@ -18,12 +18,12 @@ const GROUPS: { label: string; links: { href: string; label: string; exact?: boo
     ],
   },
   {
-    label: "AI tools",
+    label: "Guidance",
     links: [
-      { href: "/chat", label: "Assistant" },
-      { href: "/ai/resume", label: "Résumé review" },
-      { href: "/ai/interview", label: "Interview practice" },
-      { href: "/ai/recommendations", label: "What suits me" },
+      { href: "/guidance/matches", label: "What suits me" },
+      { href: "/guidance/resume", label: "Résumé report" },
+      { href: "/guidance/interview", label: "Interview practice" },
+      { href: "/mentors", label: "Find a mentor" },
     ],
   },
 ];
@@ -52,13 +52,26 @@ export function DashboardNav() {
   }
 
   return (
-    <nav aria-label="Dashboard" className="lg:sticky lg:top-20 lg:self-start">
+    /*
+      `min-w-0` is load-bearing, not tidiness.
+
+      On narrow screens the parent is a single-column grid, and a grid item's
+      default `min-width: auto` means it refuses to be narrower than its own
+      content. This nav's content is a row of nowrap links about 1200px wide, so
+      the column became 1200px inside a 343px container and every dashboard page
+      scrolled sideways by 850px. The inner `overflow-x-auto` could not help:
+      the scroll container has to be the thing that is too narrow, and nothing
+      here was ever too narrow.
+    */
+    <nav aria-label="Dashboard" className="min-w-0 lg:sticky lg:top-20 lg:self-start">
       {/*
-        Horizontal on narrow screens, where group headings would cost more
-        space than they earn; grouped and vertical from `lg`, where eleven flat
-        links had become a wall.
+        Wraps on narrow screens rather than scrolling sideways. A scroll strip
+        hides links off the right edge with no indication they are there, and
+        removing the assistant took this from eleven links to eight — few enough
+        that they all fit in two or three tidy rows. Grouped and vertical from
+        `lg`, where the headings earn their space.
       */}
-      <ul className="flex gap-1 overflow-x-auto scroll-slim pb-2 lg:hidden">
+      <ul className="flex flex-wrap gap-1 pb-2 lg:hidden">
         {GROUPS.flatMap((group) => group.links).map(item)}
       </ul>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button, Callout, Card, cx } from "@/components/ui";
-import { ProviderNote, ScoreDial, ScoreRow } from "@/components/ai-ui";
+import { RulebookNote, ScoreDial, ScoreRow } from "@/components/guidance-ui";
 import type { Citation, InterviewFeedback, InterviewQuestion } from "@/db/schema";
 
 type TargetOption = { slug: string; label: string };
@@ -53,7 +53,7 @@ export function InterviewWorkspace({ targets }: { targets: TargetOption[] }) {
     setError(null);
     setAnswers({});
     try {
-      const response = await fetch("/api/v1/ai/interview", {
+      const response = await fetch("/api/v1/guidance/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetSlug: targetSlug || null, round, count: 6 }),
@@ -90,7 +90,7 @@ export function InterviewWorkspace({ targets }: { targets: TargetOption[] }) {
               id="interview-target"
               value={targetSlug}
               onChange={(event) => setTargetSlug(event.target.value)}
-              className="w-full max-w-md rounded-xl border bg-[var(--surface)] px-3.5 py-2.5 text-sm outline-none focus:border-brand-500"
+              className="w-full max-w-md rounded-md border bg-[var(--surface)] px-3.5 py-2.5 text-sm outline-none focus:border-brand-500"
             >
               <option value="">General interview — no specific role</option>
               {targets.map((option) => (
@@ -116,7 +116,7 @@ export function InterviewWorkspace({ targets }: { targets: TargetOption[] }) {
                   onClick={() => setRound(option.value)}
                   aria-pressed={round === option.value}
                   className={cx(
-                    "rounded-xl border px-3.5 py-3 text-left transition-colors",
+                    "rounded-md border px-3.5 py-3 text-left transition-colors",
                     round === option.value
                       ? "border-brand-500 bg-brand-50 dark:bg-brand-900/25"
                       : "hover:bg-[var(--surface-raised)]",
@@ -143,7 +143,7 @@ export function InterviewWorkspace({ targets }: { targets: TargetOption[] }) {
 
       {session ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-[var(--surface-raised)] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-[var(--surface-raised)] px-4 py-3">
             <div>
               <p className="text-sm font-medium">{session.label}</p>
               <p className="text-xs text-muted">
@@ -221,7 +221,7 @@ function QuestionCard({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/v1/ai/interview/${sessionId}/answer`, {
+      const response = await fetch(`/api/v1/guidance/interview/${sessionId}/answer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionIndex: question.index, answer: answer.trim() }),
@@ -272,7 +272,7 @@ function QuestionCard({
         </div>
       </div>
 
-      <details className="mt-3 rounded-xl bg-[var(--surface-raised)] p-3">
+      <details className="mt-3 rounded-md bg-[var(--surface-raised)] p-3">
         <summary className="cursor-pointer text-sm font-medium">
           Structure to hang your answer on
         </summary>
@@ -303,7 +303,7 @@ function QuestionCard({
             onChange={(event) => setAnswer(event.target.value)}
             rows={6}
             placeholder="Write it as you'd say it out loud. Rough is fine — that's what's being fixed."
-            className="w-full resize-y rounded-xl border bg-[var(--surface)] px-3.5 py-3 text-sm leading-relaxed outline-none placeholder:text-faint focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+            className="w-full resize-y rounded-md border bg-[var(--surface)] px-3.5 py-3 text-sm leading-relaxed outline-none placeholder:text-faint focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
           />
           <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-faint">
             <span>
@@ -334,7 +334,7 @@ function QuestionCard({
 
 function Feedback({ feedback, provider }: { feedback: InterviewFeedback; provider: string }) {
   return (
-    <div className="mt-5 rounded-xl border p-4">
+    <div className="mt-5 rounded-md border p-4">
       <ScoreDial
         score={feedback.score}
         label="Answer score"
@@ -375,7 +375,7 @@ function Feedback({ feedback, provider }: { feedback: InterviewFeedback; provide
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-faint">
           Your answer, rewritten
         </p>
-        <p className="whitespace-pre-wrap rounded-xl bg-[var(--surface-raised)] p-3 text-[13.5px] leading-relaxed">
+        <p className="whitespace-pre-wrap rounded-md bg-[var(--surface-raised)] p-3 text-[13.5px] leading-relaxed">
           {feedback.improvedAnswer}
         </p>
       </div>
@@ -393,9 +393,9 @@ function Feedback({ feedback, provider }: { feedback: InterviewFeedback; provide
         </div>
       ) : null}
 
-      <ProviderNote provider={provider}>
+      <RulebookNote>
         A score here is a measure of how the answer is built, not of whether you would be hired.
-      </ProviderNote>
+      </RulebookNote>
     </div>
   );
 }

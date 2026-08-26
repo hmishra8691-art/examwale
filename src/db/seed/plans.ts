@@ -20,13 +20,12 @@ export async function seedPlans(): Promise<number> {
       name: "Free",
       plan: "FREE" as const,
       description:
-        "Everything that makes the product honest — careers, exams, jobs, reality checks — with a daily cap on AI questions.",
+        "Everything that makes the product honest — careers, exams, jobs, reality checks, and the scored guidance tools — with one mentor session a month.",
       amount: 0,
       interval: "MONTHLY" as const,
       trialDays: 0,
       sequence: 0,
       entitlements: {
-        aiDailyMessages: 15,
         mentorSessionsPerMonth: 1,
         resumeAnalysesPerMonth: 2,
         advancedFilters: false,
@@ -45,7 +44,6 @@ export async function seedPlans(): Promise<number> {
       trialDays: 7,
       sequence: 1,
       entitlements: {
-        aiDailyMessages: 100,
         mentorSessionsPerMonth: 8,
         resumeAnalysesPerMonth: 20,
         advancedFilters: true,
@@ -64,7 +62,6 @@ export async function seedPlans(): Promise<number> {
       trialDays: 7,
       sequence: 2,
       entitlements: {
-        aiDailyMessages: 100,
         mentorSessionsPerMonth: 8,
         resumeAnalysesPerMonth: 20,
         advancedFilters: true,
@@ -84,7 +81,6 @@ export async function seedPlans(): Promise<number> {
       trialDays: 0,
       sequence: 3,
       entitlements: {
-        aiDailyMessages: 100,
         mentorSessionsPerMonth: 8,
         resumeAnalysesPerMonth: 20,
         advancedFilters: true,

@@ -14,7 +14,7 @@ import { getFullProfile, profileCompleteness } from "@/modules/users/service";
 import { activeRoadmap } from "@/modules/roadmaps/service";
 import { recommendedJobs, listApplications } from "@/modules/jobs/service";
 import { upcomingDeadlines } from "@/modules/exams/service";
-import { getUsageSnapshot } from "@/modules/ai/usage";
+import { countListableMentors } from "@/modules/mentors/service";
 import {
   Badge,
   ButtonLink,
@@ -33,7 +33,7 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage() {
   const session = await requirePage("/dashboard");
 
-  const [profile, roadmap, latestAssessment, saved, documents, applications, deadlines, usage] =
+  const [profile, roadmap, latestAssessment, saved, documents, applications, deadlines, mentorsAvailable] =
     await Promise.all([
       getFullProfile(session.sub),
       activeRoadmap(session.sub),
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
       db.select().from(userDocuments).where(eq(userDocuments.userId, session.sub)).limit(10),
       listApplications(session.sub),
       upcomingDeadlines(4),
-      getUsageSnapshot(session.sub, session.plan),
+      countListableMentors(),
     ]);
 
   const completeness = profileCompleteness(profile);
@@ -111,10 +111,10 @@ export default async function DashboardPage() {
         <Stat label="Applications" value={applications.length} />
         <Stat label="Documents" value={documents.length} />
         <Stat
-          label="AI questions left today"
-          value={usage.remaining}
-          hint={`of ${usage.limit}`}
-          tone={usage.remaining <= 3 ? "warn" : undefined}
+          label="Mentors available"
+          value={mentorsAvailable}
+          hint={mentorsAvailable === 0 ? "none taking requests" : "taking requests"}
+          tone={mentorsAvailable === 0 ? "warn" : undefined}
         />
       </div>
 

@@ -16,7 +16,7 @@ import type { SessionUser } from "@/modules/auth/session";
  * Seven top-level destinations do not fit beside a search box that is worth
  * using, and shrinking the search box to make them fit was the previous
  * answer. The four people actually navigate to stay inline; the rest move into
- * an Explore menu, which is also where the AI tools live.
+ * an Explore menu, which is also where the guidance tools live.
  */
 const NAV = [
   { href: "/careers", label: "Careers" },
@@ -34,12 +34,12 @@ const MORE = [
   { href: "/pricing", label: "Plans", blurb: "What's free and what isn't" },
 ];
 
-const AI_TOOLS = [
-  { href: "/ai", label: "All AI tools", blurb: "Five tools, one page" },
-  { href: "/chat", label: "Assistant", blurb: "Ask anything, grounded in the guides" },
-  { href: "/ai/resume", label: "Résumé review", blurb: "Scored against the role you want" },
-  { href: "/ai/interview", label: "Interview practice", blurb: "Mock questions and answer feedback" },
-  { href: "/ai/recommendations", label: "Recommendations", blurb: "What fits you, and why not" },
+const GUIDANCE = [
+  { href: "/guidance", label: "All guidance", blurb: "What the tools measure, and what they don't" },
+  { href: "/mentors", label: "Find a mentor", blurb: "Verified people who have done the job" },
+  { href: "/guidance/matches", label: "What suits me", blurb: "A shortlist, and why each one might not fit" },
+  { href: "/guidance/resume", label: "Résumé report", blurb: "Scored against the role you want" },
+  { href: "/guidance/interview", label: "Interview practice", blurb: "Questions from the role's own guide" },
 ];
 
 export function SiteHeader({
@@ -69,7 +69,7 @@ export function SiteHeader({
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [menu, setMenu] = useState<"more" | "ai" | null>(null);
+  const [menu, setMenu] = useState<"more" | "guidance" | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -154,27 +154,27 @@ export function SiteHeader({
           <div className="relative hidden lg:block">
             <button
               type="button"
-              onClick={() => setMenu((value) => (value === "ai" ? null : "ai"))}
-              aria-expanded={menu === "ai"}
+              onClick={() => setMenu((value) => (value === "guidance" ? null : "guidance"))}
+              aria-expanded={menu === "guidance"}
               aria-haspopup="menu"
               className={cx(
                 "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-                pathname.startsWith("/ai") || pathname.startsWith("/chat")
+                pathname.startsWith("/guidance")
                   ? "bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-100"
                   : "text-muted hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
               )}
             >
               <svg viewBox="0 0 20 20" fill="none" className="size-4" aria-hidden>
                 <path
-                  d="M10 3.5 11.4 7l3.6 1.4-3.6 1.4L10 13.5 8.6 9.8 5 8.4 8.6 7 10 3.5ZM15.5 12.5l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6.6-1.5Z"
+                  d="M7 3.5h7.5a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H7a2.5 2.5 0 0 1-2.5-2.5v-8A2.5 2.5 0 0 1 7 3.5Zm0 0v13M8.5 7.5h4.5M8.5 10h4.5"
                   stroke="currentColor"
                   strokeWidth="1.3"
                   strokeLinejoin="round"
                 />
               </svg>
-              AI tools
+              Guidance
             </button>
-            {menu === "ai" ? <Dropdown items={AI_TOOLS} onPick={() => setMenu(null)} /> : null}
+            {menu === "guidance" ? <Dropdown items={GUIDANCE} onPick={() => setMenu(null)} /> : null}
           </div>
 
           <div className="relative hidden lg:block">
@@ -286,7 +286,7 @@ export function SiteHeader({
               </Link>
               <Link
                 href="/signup"
-                className="shrink-0 whitespace-nowrap rounded-xl bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                className="shrink-0 whitespace-nowrap rounded-md bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"
               >
                 Get started
               </Link>
@@ -333,9 +333,9 @@ export function SiteHeader({
             ))}
 
             <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-faint">
-              AI tools
+              Guidance
             </p>
-            {AI_TOOLS.map((item) => (
+            {GUIDANCE.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -423,7 +423,7 @@ function Dropdown({
   return (
     <div
       role="menu"
-      className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-2xl border bg-[var(--surface)] p-1.5 shadow-xl"
+      className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 overflow-hidden rounded-lg border bg-[var(--surface)] p-1.5 shadow-xl"
     >
       {items.map((item) => (
         <Link
@@ -431,7 +431,7 @@ function Dropdown({
           href={item.href}
           role="menuitem"
           onClick={onPick}
-          className="block rounded-xl px-3 py-2.5 hover:bg-[var(--surface-raised)]"
+          className="block rounded-md px-3 py-2.5 hover:bg-[var(--surface-raised)]"
         >
           <span className="block text-sm font-medium">{item.label}</span>
           <span className="mt-0.5 block text-xs text-muted">{item.blurb}</span>

@@ -1,7 +1,7 @@
 /**
  * Payment provider abstraction.
  *
- * Mirrors `modules/ai/provider.ts`: the product must run, and be developable
+ * Mirrors the notification channels: the product must run, and be developable
  * and testable, without a paid third party configured. The default is a manual
  * provider that records an intent and settles it in-process — which is exactly
  * what an admin granting a comped subscription needs anyway, so it is not a

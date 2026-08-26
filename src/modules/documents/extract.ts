@@ -11,7 +11,6 @@
  * rather than to the model.
  */
 import type { DocumentType, ExtractedResume } from "@/db/schema";
-import { getProvider } from "@/modules/ai/provider";
 
 export async function extractText(input: {
   buffer: Buffer;
@@ -312,92 +311,26 @@ function buildIssues(input: {
 // Model-assisted merge
 // ---------------------------------------------------------------------------
 
-const RESUME_SCHEMA = {
-  type: "object",
-  required: ["skills", "education", "experience", "certifications", "issues"],
-  properties: {
-    fullName: { type: "string" },
-    email: { type: "string" },
-    phone: { type: "string" },
-    skills: { type: "array", items: { type: "string" } },
-    education: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["qualification"],
-        properties: {
-          qualification: { type: "string" },
-          institution: { type: "string" },
-          year: { type: "string" },
-        },
-      },
-    },
-    experience: {
-      type: "array",
-      items: {
-        type: "object",
-        required: ["title"],
-        properties: {
-          title: { type: "string" },
-          organisation: { type: "string" },
-          duration: { type: "string" },
-          summary: { type: "string" },
-        },
-      },
-    },
-    certifications: { type: "array", items: { type: "string" } },
-    totalYearsExperience: { type: "number" },
-    issues: { type: "array", items: { type: "string" } },
-  },
-} as const;
 
-export async function parseResume(text: string): Promise<{
+/**
+ * Pull structured fields out of a résumé.
+ *
+ * `parseResumeDeterministic` does this with patterns and a curated skill
+ * vocabulary. A model used to run alongside it and the two results were merged,
+ * which caught skills outside the vocabulary at the cost of occasionally
+ * recording a degree the document did not claim.
+ *
+ * Nothing extracted here has ever reached a profile without the user confirming
+ * each item — that gate is unchanged and is why this was safe to run at all.
+ * The model half is gone regardless: the accuracy it bought was small, and it
+ * was the last thing sending someone's employment history to a third party.
+ */
+export function parseResume(text: string): {
   value: ExtractedResume;
   confidence: Record<string, number>;
   provider: string;
-}> {
-  const deterministic = parseResumeDeterministic(text);
-  const provider = getProvider();
-
-  if (!provider.isModelBacked || text.trim().length < 80) {
-    return { ...deterministic, provider: provider.name };
-  }
-
-  const result = await provider.structured<ExtractedResume>({
-    schemaName: "extract_resume",
-    schema: RESUME_SCHEMA as unknown as Record<string, unknown>,
-    system: `Extract structured data from this résumé.
-
-Rules:
-- Only record what is present in the text. Do not infer a degree, an employer or a skill that isn't written down.
-- If a field is absent, omit it rather than guessing.
-- 'issues' should list concrete, fixable problems with the résumé — missing contact details, unquantified claims, unclear dates, excessive length. Be specific and practical; do not comment on the person.`,
-    messages: [{ role: "user", content: text.slice(0, 24_000) }],
-    fallback: () => deterministic.value,
-  });
-
-  if (result.usedFallback) return { ...deterministic, provider: result.provider };
-
-  // Union the skill lists; the deterministic pass has a curated vocabulary the
-  // model sometimes misses, and the model catches things not in that list.
-  const merged: ExtractedResume = {
-    ...result.value,
-    skills: [...new Set([...(result.value.skills ?? []), ...deterministic.value.skills])],
-    email: result.value.email ?? deterministic.value.email,
-    phone: result.value.phone ?? deterministic.value.phone,
-    totalYearsExperience:
-      result.value.totalYearsExperience ?? deterministic.value.totalYearsExperience,
-    issues: [...new Set([...(result.value.issues ?? []), ...deterministic.value.issues])].slice(0, 8),
-  };
-
-  // Where both agree, confidence rises; where only the model spoke, it stays
-  // mid — the user still confirms before any of this reaches their profile.
-  const confidence: Record<string, number> = { ...deterministic.confidence };
-  for (const key of Object.keys(confidence)) {
-    confidence[key] = Math.min(0.95, confidence[key] + 0.15);
-  }
-
-  return { value: merged, confidence, provider: result.provider };
+} {
+  return { ...parseResumeDeterministic(text), provider: "rulebook" };
 }
 
 /** Structured read of a government exam notification (spec section 19). */

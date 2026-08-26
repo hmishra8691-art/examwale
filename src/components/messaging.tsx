@@ -152,7 +152,7 @@ export function Thread({
               ) : null}
               <div className={`min-w-0 max-w-[75%] ${mine ? "text-right" : ""}`}>
                 <div
-                  className={`inline-block rounded-2xl px-3.5 py-2 text-left text-[14.5px] leading-relaxed ${
+                  className={`inline-block rounded-lg px-3.5 py-2 text-left text-[14.5px] leading-relaxed ${
                     message.deletedAt
                       ? "border border-dashed text-faint"
                       : mine

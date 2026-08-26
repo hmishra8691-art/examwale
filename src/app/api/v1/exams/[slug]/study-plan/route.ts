@@ -6,16 +6,18 @@ import { getSession } from "@/modules/auth/session";
 import { consume, consumeByClient } from "@/modules/shared/rate-limit";
 import { ValidationError } from "@/modules/shared/errors";
 import { buildStudyPlan, getExamBySlug } from "@/modules/exams/service";
-import { addStudyNarrative } from "@/modules/ai/study-narrative";
-import { assertWithinQuota, logUsage } from "@/modules/ai/usage";
 
 const bodySchema = z.object({
   hoursPerDay: z.number().min(0.5).max(16),
   targetDate: z.string(),
   /**
-   * Opt-in. The plan is complete without it, and a signed-out visitor or a
-   * user at their daily limit still gets the full computed plan rather than an
-   * error — the AI layer is an addition, never a gate.
+   * Accepted and ignored.
+   *
+   * This used to add a written narrative around the computed plan. The plan was
+   * always the real output and the prose was always an addition; the addition
+   * is gone. The field stays so that a client still sending it gets its plan
+   * rather than a validation error — the flag can be dropped once nothing sends
+   * it.
    */
   withGuidance: z.boolean().optional().default(false),
 });
@@ -63,40 +65,10 @@ export const POST = route(async (request: Request, context: Context) => {
     targetDate,
   });
 
-  // The narrative is best-effort by construction. If the quota is spent or the
-  // provider fails, the user gets the computed plan — which is the part that
-  // matters — rather than a failed request.
-  let plan = computed;
-  let guidanceNote: string | null = null;
-
-  if (body.withGuidance && session) {
-    try {
-      await assertWithinQuota(session.sub, session.plan);
-      const started = Date.now();
-      plan = await addStudyNarrative({
-        plan: computed,
-        feasibility,
-        examName: exam.exam.shortName ?? exam.exam.name,
-        hoursPerDay: body.hoursPerDay,
-      });
-      if (plan.narrative) {
-        await logUsage({
-          userId: session.sub,
-          mode: "EXAM",
-          provider: plan.narrative.provider,
-          latencyMs: Date.now() - started,
-        });
-      } else {
-        guidanceNote =
-          "Written guidance isn't available on this deployment — no language-model key is configured. The plan and the feasibility check below are computed and complete.";
-      }
-    } catch (error) {
-      console.error("[study-plan] guidance skipped", error);
-      guidanceNote = "Written guidance couldn't be generated this time. The computed plan below is unaffected.";
-    }
-  } else if (body.withGuidance && !session) {
-    guidanceNote = "Sign in to add written guidance. The computed plan below doesn't need an account.";
-  }
+  const plan = computed;
+  const guidanceNote = body.withGuidance
+    ? "The written commentary that used to accompany this plan has been removed. The schedule and the feasibility check below are computed from the syllabus and are the part that mattered."
+    : null;
 
   if (session) {
     await db.insert(studyPlans).values({

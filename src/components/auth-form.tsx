@@ -66,7 +66,7 @@ export function AuthForm({
         <>
           <a
             href={`/api/v1/auth/google?next=${encodeURIComponent(next)}`}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--surface-raised)]"
+            className="flex w-full items-center justify-center gap-3 rounded-md border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--surface-raised)]"
           >
             <svg viewBox="0 0 18 18" className="size-4" aria-hidden>
               <path fill="#4285F4" d="M17.6 9.2c0-.6-.1-1.2-.2-1.8H9v3.5h4.8a4.1 4.1 0 01-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.6z" />

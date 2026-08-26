@@ -31,8 +31,8 @@ export function ProviderNav({ items }: { items: ProviderNavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Provider" className="lg:sticky lg:top-20 lg:self-start">
-      <ul className="flex gap-1 overflow-x-auto scroll-slim pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+    <nav aria-label="Provider" className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+      <ul className="flex flex-wrap gap-1 pb-2 lg:flex-col lg:flex-nowrap lg:pb-0">
         {items.map((item) => {
           const active =
             item.href === "/provider"

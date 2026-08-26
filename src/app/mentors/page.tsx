@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listMentors } from "@/modules/mentors/service";
+import { countListableMentors, listMentors } from "@/modules/mentors/service";
 import { flag, int, one } from "@/modules/shared/params";
 import { getMessages } from "@/modules/i18n/service";
 import { formatMoney } from "@/modules/shared/format";
@@ -38,7 +38,7 @@ export default async function MentorsPage({ searchParams }: Props) {
   const params = await searchParams;
   const get = (key: string) => params[key];
 
-  const [t, result] = await Promise.all([
+  const [t, result, totalListable] = await Promise.all([
     getMessages(),
     listMentors({
       search: one(get("q")),
@@ -47,6 +47,7 @@ export default async function MentorsPage({ searchParams }: Props) {
       freeOnly: flag(get("free")),
       page: int(get("page"), { min: 1, max: 5000 }),
     }),
+    countListableMentors(),
   ]);
 
   const activeLanguage = one(get("language"));
@@ -158,10 +159,37 @@ export default async function MentorsPage({ searchParams }: Props) {
         </ul>
       ) : (
         <div className="mt-6">
-          <EmptyState
-            title="No mentors match that"
-            description="Try a different language filter, or clear the search."
-          />
+          {/*
+            Two different empty states, because they are two different facts and
+            only one of them is the visitor's to fix.
+
+            This page previously said "try a different language filter" in both
+            cases. Told that on a day when nobody is listed at all, a visitor
+            clears filters they never set, gets the same screen, and concludes
+            the site is broken — while the product is meanwhile claiming a human
+            will read their work. If the bench is empty, say so.
+          */}
+          {totalListable === 0 ? (
+            <EmptyState
+              title="No mentors are taking requests right now"
+              description="This isn't a filter — nobody is currently listed. The guidance tools don't need a mentor and still work; this page will fill up again as applications are verified."
+              action={
+                <ButtonLink href="/guidance" variant="secondary" size="sm">
+                  Use the guidance tools
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <EmptyState
+              title="No mentors match that"
+              description={`${totalListable} ${totalListable === 1 ? "mentor is" : "mentors are"} taking requests, but none match these filters. Try clearing the language or rate filter.`}
+              action={
+                <ButtonLink href="/mentors" variant="secondary" size="sm">
+                  Clear filters
+                </ButtonLink>
+              }
+            />
+          )}
         </div>
       )}
 

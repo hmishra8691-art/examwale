@@ -95,7 +95,7 @@ export default async function MentorDashboardPage() {
             {credentials.map((credential) => (
               <li
                 key={credential.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] p-3"
               >
                 <div>
                   <p className="text-sm font-medium">{credential.title}</p>

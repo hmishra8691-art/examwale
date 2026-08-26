@@ -183,7 +183,7 @@ export default async function PathwaysPage() {
           <div className="mt-4">
             <Link
               href="/assessment"
-              className="inline-flex items-center rounded-xl bg-brand-600 px-5 py-3 font-medium text-white hover:bg-brand-700"
+              className="inline-flex items-center rounded-md bg-brand-600 px-5 py-3 font-medium text-white hover:bg-brand-700"
             >
               Take the assessment
             </Link>

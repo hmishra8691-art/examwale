@@ -35,10 +35,8 @@ const STATUS_TONE: Record<string, "good" | "warn" | "bad" | "neutral"> = {
 
 export function DocumentsWorkspace({
   initialDocuments,
-  modelBacked,
 }: {
   initialDocuments: DocumentRow[];
-  modelBacked: boolean;
 }) {
   const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
@@ -162,7 +160,7 @@ export function DocumentsWorkspace({
           if (file) void upload(file);
         }}
         className={cx(
-          "flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed px-6 py-10 text-center transition-colors",
           dragging ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20" : "hover:bg-[var(--surface-raised)]",
         )}
       >
@@ -184,15 +182,13 @@ export function DocumentsWorkspace({
         <p className="mt-1 text-sm text-muted">PDF, Word (.docx), plain text, PNG or JPEG · up to 10 MB</p>
       </label>
 
-      {!modelBacked ? (
-        <Callout tone="warn" title="Extraction is running on rules, not a model">
-          <p>
-            Without <code>ANTHROPIC_API_KEY</code> configured, we use the built-in pattern-based
-            parser. It handles well-structured résumés reasonably and unusual layouts poorly. Check
-            the extracted fields carefully before confirming.
-          </p>
-        </Callout>
-      ) : null}
+      <Callout tone="info" title="Reading is pattern-based, and nothing is saved without you">
+        <p>
+          A pattern-based parser pulls fields out of the file. It handles a conventionally laid-out
+          résumé well and an unusual one poorly, so check what it found before confirming — nothing
+          reaches your profile until you tick it.
+        </p>
+      </Callout>
 
       {error ? (
         <Callout tone="danger">

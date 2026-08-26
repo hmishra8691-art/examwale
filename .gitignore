@@ -3,6 +3,8 @@ node_modules/
 .storage/
 *.tsbuildinfo
 next-env.d.ts
+# Never commit real credentials. The deployed repo had a .env with a live
+# DATABASE_URL and AUTH_SECRET in its history; this stops a repeat.
 .env
 .env.local
 .DS_Store

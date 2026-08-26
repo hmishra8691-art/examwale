@@ -1,37 +1,60 @@
 @import "tailwindcss";
 
 /*
-  Design language
-  ---------------
-  Deep indigo ground with a warm saffron accent — readable in bright daylight
-  on a cheap phone screen, which is where most of this product's users will
-  meet it. Type is set larger than a typical dashboard: a Class 10 student and
-  a 45-year-old career changer both need to read this comfortably.
+  Design language — editorial
+  ---------------------------
+  The product's claim is that a verified person read your work and answered you.
+  The surface has to earn that, and decoration is the wrong way to do it: a page
+  that looks like a marketing site invites the reader to discount what it says.
+  So the reference is a serious newspaper or a private bank's client letter —
+  authority through restraint.
+
+  Four decisions carry it:
+
+  · A serif for display. Source Serif 4 was drawn for reading on screens at
+    text sizes, not for looking clever in a headline. Inter continues to set
+    the body and every control, because a serif UI is affectation.
+  · Warm paper rather than pure white. #fbfaf8 is barely off-white, but it
+    stops the page glaring and lets hairline rules read as rules instead of
+    dirt on the screen.
+  · One accent, deep. Navy #2f5175 — 7.9:1 on paper, 8.2:1 under white text.
+    The saffron survives only as a restrained mark, not a second brand colour.
+  · Rules, not boxes. Content is separated by 1px lines and whitespace instead
+    of by cards with shadows. A stack of floating panels reads as a dashboard;
+    an editorial page reads as a document.
+
+  What did NOT get flattened: the confidence colours. Verified green, estimate
+  amber and the generated-content violet are load-bearing — they are how the
+  reader tells a checked fact from a planning figure — so they keep their
+  distinct hues and are only pulled back in saturation.
+
+  Type stays larger than a typical dashboard. A Class 10 student and a
+  45-year-old career changer both read this on a cheap phone in daylight.
 */
 
 @theme {
-  --color-ink-50: #f6f7fb;
-  --color-ink-100: #eceef6;
-  --color-ink-200: #d6dae9;
-  --color-ink-300: #b2bad3;
-  --color-ink-400: #8792b4;
-  --color-ink-500: #667298;
-  --color-ink-600: #4e587c;
-  --color-ink-700: #3d4562;
-  --color-ink-800: #2b3149;
-  --color-ink-900: #1b1f31;
-  --color-ink-950: #10131f;
+  --color-ink-50: #f4f3f0;
+  --color-ink-100: #eae8e3;
+  --color-ink-200: #dcd9d2;
+  --color-ink-300: #bab6ad;
+  --color-ink-400: #8d8a84;
+  --color-ink-500: #696f7d;
+  --color-ink-600: #5a6272;
+  --color-ink-700: #434a58;
+  --color-ink-800: #2d323d;
+  --color-ink-900: #1b1e26;
+  --color-ink-950: #12141a;
 
-  --color-brand-50: #eef3ff;
-  --color-brand-100: #dbe5ff;
-  --color-brand-200: #bdd0ff;
-  --color-brand-300: #92b1ff;
-  --color-brand-400: #6187fb;
-  --color-brand-500: #3d63f3;
-  --color-brand-600: #2745e0;
-  --color-brand-700: #2035bd;
-  --color-brand-800: #1f2f99;
-  --color-brand-900: #1f2e79;
+  --color-brand-50: #f1f5f9;
+  --color-brand-100: #e0e8f1;
+  --color-brand-200: #c5d4e4;
+  --color-brand-300: #a9c0d8;
+  --color-brand-400: #7593b5;
+  --color-brand-500: #4b6c92;
+  --color-brand-600: #2f5175;
+  --color-brand-700: #24405d;
+  --color-brand-800: #1d3349;
+  --color-brand-900: #182a3c;
 
   --color-saffron-50: #fff8ec;
   --color-saffron-100: #ffedc9;
@@ -39,8 +62,8 @@
   --color-saffron-300: #ffbc53;
   --color-saffron-400: #ffa22b;
   --color-saffron-500: #f98307;
-  --color-saffron-600: #dd6002;
-  --color-saffron-700: #b74206;
+  --color-saffron-600: #a1490a;
+  --color-saffron-700: #8f4008;
   --color-saffron-800: #94330c;
   --color-saffron-900: #7a2b0d;
 
@@ -61,11 +84,12 @@
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans Devanagari", sans-serif;
-  --font-display: "Bricolage Grotesque", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Source Serif 4", ui-serif, Georgia, "Noto Serif Devanagari", serif;
 }
 
 :root {
-  --surface: #ffffff;
+  /* Warm paper, not white. See the note at the top of this file. */
+  --surface: #fbfaf8;
   --surface-raised: var(--color-ink-50);
   --surface-sunken: var(--color-ink-100);
   --border: var(--color-ink-200);
@@ -103,6 +127,28 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+}
+
+/*
+  The page never scrolls sideways.
+
+  This is a backstop, not the fix. The real fix is `min-w-0` on grid and flex
+  children that contain something wide, because a grid item's default
+  `min-width: auto` lets its content dictate the column width — that is how a
+  1200px nav ended up inside a 343px phone and dragged the whole document with
+  it. Those are corrected at the component.
+
+  `clip` rather than `hidden` on purpose: `overflow: hidden` on an ancestor
+  silently kills `position: sticky` inside it, and the dashboard, admin and
+  provider navs are all sticky from `lg`. `clip` cuts the overflow without
+  creating a scroll container, so sticky still works.
+
+  Anything genuinely wider than a phone — a data table, a code block — scrolls
+  inside its own `overflow-x-auto` box, which is unaffected by this.
+*/
+html,
+body {
+  overflow-x: clip;
 }
 
 body {
@@ -163,26 +209,65 @@ body {
   color: var(--text-faint);
 }
 
+/*
+  A card is a bordered block, not a floating panel.
+
+  Radius came down from 0.875rem and the shadow went entirely. A pill-shaped
+  card with a drop shadow says "app widget"; a crisp 1px rectangle says
+  "section of a document", which is what these are.
+*/
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.875rem;
+  border-radius: 0.375rem;
+}
+
+/*
+  Display type.
+
+  The serif is for headings and figures only, and it is set tighter than the
+  body: at display sizes the default tracking of a text-optimised serif reads
+  loose. `text-wrap: balance` stops a two-line heading leaving one orphaned
+  word, which is the single most common thing that makes a page look unedited.
+*/
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+.font-display,
+[class*="font-[family-name:var(--font-display)]"] {
+  letter-spacing: -0.011em;
+}
+
+/*
+  Reading measure.
+
+  Long prose is capped near 68 characters. Beyond that the eye loses the line
+  return, which is why newspapers set narrow columns rather than running text
+  the full width of the page.
+*/
+.prose-plain {
+  max-width: 68ch;
 }
 
 .prose-plain h2 {
-  font-size: 1.15rem;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.011em;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
 .prose-plain h3 {
-  font-size: 1rem;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
   margin-top: 1.25em;
   margin-bottom: 0.4em;
 }
 .prose-plain p {
   margin-bottom: 0.85em;
+  line-height: 1.7;
 }
 .prose-plain ul,
 .prose-plain ol {

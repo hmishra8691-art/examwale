@@ -31,7 +31,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
 
       <Callout tone="info" title="What's deliberately not here">
         <p>
-          This view shows account metadata only — no profile contents, documents or AI
+          This view shows account metadata only — no profile contents, documents or saved
           conversations. Support access to a user&rsquo;s own data should be a separate, logged,
           consent-gated flow, not a side effect of opening the user list.
         </p>

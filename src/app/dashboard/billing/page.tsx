@@ -58,15 +58,11 @@ export default async function BillingPage() {
         <Card className="mt-4">
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div className="flex justify-between gap-2">
-              <dt className="text-muted">AI questions per day</dt>
-              <dd className="font-medium tabular-nums">{entitlements.aiDailyMessages}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
               <dt className="text-muted">Mentor sessions per month</dt>
               <dd className="font-medium tabular-nums">{entitlements.mentorSessionsPerMonth}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-muted">Résumé analyses per month</dt>
+              <dt className="text-muted">Résumé reports per month</dt>
               <dd className="font-medium tabular-nums">{entitlements.resumeAnalysesPerMonth}</dd>
             </div>
             <div className="flex justify-between gap-2">

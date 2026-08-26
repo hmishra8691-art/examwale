@@ -360,7 +360,7 @@ export default async function HomePage() {
 
       {/* Honesty ---------------------------------------------------------- */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <div className="rounded-2xl border border-saffron-200 bg-saffron-50/60 p-6 dark:border-saffron-800 dark:bg-saffron-900/15 sm:p-8">
+        <div className="rounded-lg border border-saffron-200 bg-saffron-50/60 p-6 dark:border-saffron-800 dark:bg-saffron-900/15 sm:p-8">
           <h2 className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight sm:text-2xl">
             What we won&rsquo;t do
           </h2>
@@ -393,7 +393,7 @@ export default async function HomePage() {
 
       {/* CTA -------------------------------------------------------------- */}
       <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6">
-        <div className="rounded-2xl bg-ink-900 px-6 py-12 text-center dark:bg-ink-800 sm:px-12">
+        <div className="rounded-lg bg-ink-900 px-6 py-12 text-center dark:bg-ink-800 sm:px-12">
           <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Ten minutes now, a clearer decade after
           </h2>

@@ -22,11 +22,13 @@ const CONFIDENCE_STYLES = {
       "bg-estimate-50 text-estimate-700 dark:bg-estimate-600/15 dark:text-estimate-100 ring-estimate-600/25",
     hint: "A range gathered for planning, not a quoted figure.",
   },
+  // The enum value stays because rows in the database still carry it. Nothing
+  // new is ever labelled this way: the generated content it described is gone.
   AI_JUDGEMENT: {
-    label: "AI judgement",
+    label: "Generated",
     className:
       "bg-judgement-50 text-judgement-700 dark:bg-judgement-600/15 dark:text-judgement-100 ring-judgement-600/25",
-    hint: "Generated reasoning, not a verified fact. Check anything that matters.",
+    hint: "Written by a model before that was removed. Never verified against a source — treat it as a claim, not a fact.",
   },
   UNVERIFIED: {
     label: "Unverified",
@@ -99,21 +101,29 @@ type ButtonBase = {
 };
 
 function buttonClass({ variant = "primary", size = "md", full }: ButtonBase): string {
+  /*
+    The disabled primary used to be white text on `ink-300` — 2.0:1, which is
+    below any legible threshold and read as a broken control rather than an
+    inactive one. A disabled button still has to be readable: the user needs to
+    know what it will do once they have filled the field in. It now keeps its
+    shape and drops to muted text on a sunken ground, at 4.1:1.
+  */
   const variants = {
     primary:
-      "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 shadow-sm disabled:bg-ink-300 dark:disabled:bg-ink-700",
+      "bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-800 " +
+      "disabled:bg-[var(--surface-sunken)] disabled:text-[var(--text-faint)] disabled:border disabled:border-[var(--border)]",
     secondary:
       "bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-raised)]",
     ghost: "text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]",
     danger: "bg-red-600 text-white hover:bg-red-700",
   };
   const sizes = {
-    sm: "px-3 py-1.5 text-sm rounded-lg gap-1.5",
-    md: "px-4 py-2.5 text-sm rounded-xl gap-2",
-    lg: "px-5 py-3 text-base rounded-xl gap-2",
+    sm: "px-3 py-1.5 text-sm rounded-md gap-1.5",
+    md: "px-4 py-2.5 text-sm rounded-md gap-2",
+    lg: "px-5 py-3 text-base rounded-md gap-2",
   };
   return cx(
-    "inline-flex items-center justify-center font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-70",
+    "inline-flex items-center justify-center font-medium transition-colors disabled:cursor-not-allowed",
     variants[variant],
     sizes[size],
     full && "w-full",
@@ -164,9 +174,18 @@ export function SectionHeading({
   id?: string;
 }) {
   return (
+    /*
+      The display serif belongs here, not only on the pages that remembered to
+      ask for it. Most section titles in the product come through this
+      component, so setting it once is what makes the type feel like one
+      decision rather than a per-page preference.
+    */
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 id={id} className="text-lg font-semibold tracking-tight sm:text-xl">
+      <div className="min-w-0">
+        <h2
+          id={id}
+          className="font-[family-name:var(--font-display)] text-xl font-semibold tracking-tight sm:text-2xl"
+        >
           {title}
         </h2>
         {description ? <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p> : null}
@@ -192,7 +211,7 @@ export function SummaryPanel({
   footer?: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-brand-200 bg-brand-50/60 p-5 dark:border-brand-800 dark:bg-brand-900/20">
+    <section className="rounded-lg border border-brand-200 bg-brand-50/60 p-5 dark:border-brand-800 dark:bg-brand-900/20">
       {eyebrow ? (
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-brand-300">
           {eyebrow}
@@ -283,7 +302,7 @@ export function EmptyState({
   return (
     <div className="card flex flex-col items-center px-6 py-12 text-center">
       {icon ? <div className="mb-3 text-ink-400">{icon}</div> : null}
-      <h3 className="text-base font-semibold">{title}</h3>
+      <h3 className="font-[family-name:var(--font-display)] text-lg font-semibold">{title}</h3>
       <p className="mt-1 max-w-md text-sm text-muted">{description}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
@@ -306,7 +325,7 @@ export function Callout({
     good: "border-verified-600/30 bg-verified-50 dark:border-verified-600/40 dark:bg-verified-700/10",
   };
   return (
-    <div className={cx("rounded-xl border p-4 text-sm", tones[tone])}>
+    <div className={cx("rounded-md border p-4 text-sm", tones[tone])}>
       {title ? <p className="mb-1 font-semibold">{title}</p> : null}
       <div className="text-[13.5px] leading-relaxed">{children}</div>
     </div>

@@ -15,18 +15,13 @@ export const metadata: Metadata = {
 
 const FEATURE_ROWS: { key: string; label: string; format: (value: unknown) => string }[] = [
   {
-    key: "aiDailyMessages",
-    label: "AI questions per day",
-    format: (value) => String(value),
-  },
-  {
     key: "mentorSessionsPerMonth",
     label: "Mentor sessions per month",
     format: (value) => String(value),
   },
   {
     key: "resumeAnalysesPerMonth",
-    label: "Résumé analyses per month",
+    label: "Résumé reports per month",
     format: (value) => String(value),
   },
   {
@@ -128,7 +123,7 @@ export default async function PricingPage() {
                 ) : (
                   <a
                     href={`/login?next=/pricing`}
-                    className="inline-flex w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+                    className="inline-flex w-full items-center justify-center rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
                   >
                     Sign in to choose
                   </a>

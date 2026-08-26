@@ -372,7 +372,7 @@ export function MentorApplyForm({ countryId }: { countryId: string }) {
         </label>
       </div>
 
-      <div className="rounded-xl border border-[var(--border)] p-4">
+      <div className="rounded-md border border-[var(--border)] p-4">
         <label className="flex items-start gap-3">
           <input
             type="checkbox"

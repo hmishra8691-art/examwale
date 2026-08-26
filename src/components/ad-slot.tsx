@@ -59,7 +59,7 @@ export async function AdSlot({
       {creatives.map((creative) => (
         <div
           key={creative.id}
-          className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-raised)] p-4"
+          className="rounded-md border border-dashed border-[var(--border)] bg-[var(--surface-raised)] p-4"
         >
           <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted">
             <span className="rounded bg-ink-200 px-1.5 py-0.5 text-ink-800 dark:bg-ink-700 dark:text-ink-100">
